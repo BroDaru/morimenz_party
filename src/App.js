@@ -19,60 +19,31 @@ const INITIAL_DATA = Array.from({ length: 5 }, (_, i) => ({
 
 const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V"];
 
-// --- [3] 오버레이 선택창 (캐릭터용) ---
-const OverlaySelector = ({ data, onSelect, onClose, usedIds }) => {
-  return (
-    <div className="absolute inset-0 z-20 bg-slate-900/95 flex flex-col border-2 border-yellow-500 rounded-lg overflow-hidden animate-fadeIn backdrop-blur-sm">
-      <div className="flex justify-between items-center p-2 bg-slate-800/80 border-b border-slate-700">
-        <span className="font-bold text-yellow-500 text-sm">캐릭터 선택</span>
-        <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="text-slate-400 hover:text-white">
-          <X size={18} />
-        </button>
-      </div>
-      <div className="flex-1 overflow-y-auto p-2 scrollbar-hide">
-        <div className="grid grid-cols-2 gap-2">
-          {data.map((item) => {
-            const isUsed = usedIds.includes(item.id);
-            return (
-              <button
-                key={item.id}
-                disabled={isUsed}
-                onClick={(e) => { e.stopPropagation(); onSelect(item); }}
-                className={`
-                  flex flex-col items-center p-2 rounded border transition-all
-                  ${isUsed 
-                    ? 'border-slate-700 bg-slate-800/30 opacity-40 cursor-not-allowed grayscale' 
-                    : 'border-slate-600 bg-slate-800/80 hover:border-yellow-400 hover:bg-slate-700'
-                  }
-                `}
-              >
-                <div className="w-10 h-10 rounded-full mb-1 overflow-hidden border border-slate-500 bg-black">
-                   <img src={item.img} alt={item.name} className="w-full h-full object-cover"/>
-                </div>
-                <span className="text-xs font-bold truncate w-full text-center text-white">{item.name}</span>
-                {isUsed && <span className="text-[9px] text-red-400 mt-1">사용중</span>}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// --- [4] 모달 (장비 선택용) ---
-const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds }) => {
+// --- [3] 통합 선택 모달 (캐릭터 & 명륜 공용) ---
+const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type }) => {
   if (!isOpen) return null;
 
+  // 그리드 설정: 캐릭터는 3열, 명륜은 4열
+  const gridClass = type === 'char' ? 'grid-cols-3' : 'grid-cols-4';
+  // 이미지 비율: 캐릭터는 길쭉하게(5:9), 명륜은 카드비율(2:3)
+  const aspectClass = type === 'char' ? 'aspect-[5/9]' : 'aspect-[2/3]';
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-slate-800 w-full max-w-2xl rounded-xl border border-slate-600 shadow-2xl overflow-hidden m-4" onClick={e => e.stopPropagation()}>
-        <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-900">
-          <h3 className="text-xl font-bold text-yellow-500">{title} 선택</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-white"><X size={24}/></button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={onClose}>
+      {/* 모달 크기: 최대 너비 늘림 (max-w-5xl) */}
+      <div className="bg-slate-900 w-full max-w-5xl rounded-xl border-2 border-slate-600 shadow-2xl overflow-hidden m-4 flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+        
+        {/* 헤더 */}
+        <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-950">
+          <h3 className="text-2xl font-bold text-yellow-500">{title}</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-white p-2">
+            <X size={28} />
+          </button>
         </div>
-        <div className="p-6 max-h-[60vh] overflow-y-auto">
-          <div className="grid grid-cols-4 sm:grid-cols-5 gap-4">
+
+        {/* 리스트 영역 */}
+        <div className="p-6 overflow-y-auto scrollbar-hide flex-1">
+          <div className={`grid ${gridClass} gap-4`}>
             {data.map((item) => {
               const isUsed = usedIds.includes(item.id);
               return (
@@ -81,18 +52,37 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds }) => 
                   disabled={isUsed}
                   onClick={() => onSelect(item)}
                   className={`
-                    relative flex flex-col items-center p-3 rounded-lg border-2 transition-all
+                    relative group flex flex-col items-center rounded-lg border-2 transition-all overflow-hidden
                     ${isUsed 
-                      ? 'border-slate-700 bg-slate-800/50 opacity-40 cursor-not-allowed grayscale' 
-                      : 'border-slate-600 bg-slate-700 hover:border-yellow-400 hover:bg-slate-600 hover:scale-105 shadow-lg'
+                      ? 'border-slate-800 opacity-40 grayscale cursor-not-allowed' 
+                      : 'border-slate-600 hover:border-yellow-500 hover:scale-[1.02] shadow-lg bg-slate-800'
                     }
                   `}
                 >
-                  <div className="w-12 h-12 rounded-full mb-2 overflow-hidden border border-slate-500 bg-black">
-                     <img src={item.img} alt={item.name} className="w-full h-full object-cover"/>
+                  {/* 이미지 영역 (풀 사이즈) */}
+                  <div className={`w-full ${aspectClass} bg-slate-950 relative`}>
+                     <img 
+                       src={item.img} 
+                       alt={item.name} 
+                       className="w-full h-full object-cover" 
+                       loading="lazy"
+                     />
+                     {/* 이름 오버레이 (하단) */}
+                     <div className="absolute bottom-0 w-full bg-black/70 p-2 text-center">
+                       <span className="text-sm md:text-base font-bold text-white truncate block">
+                         {item.name}
+                       </span>
+                     </div>
                   </div>
-                  <span className="text-sm font-bold truncate w-full text-center text-white">{item.name}</span>
-                  {isUsed && <span className="absolute top-1 right-1 bg-red-600 text-white text-[10px] px-1 rounded">사용중</span>}
+                  
+                  {/* 사용 중 배지 */}
+                  {isUsed && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                      <span className="bg-red-600 text-white font-bold px-3 py-1 rounded text-sm border border-red-400">
+                        사용중
+                      </span>
+                    </div>
+                  )}
                 </button>
               );
             })}
@@ -103,12 +93,12 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds }) => 
   );
 };
 
-// --- [5] 메인 리스트 ---
+// --- [4] 메인 리스트 ---
 const PartyListPage = ({ parties }) => {
   return (
     <div 
       className="p-8 min-h-screen text-white bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: "url('/images/BG.png')" }}
+      style={{ backgroundImage: "url('/morimenz_party/images/BG.png')" }}
     >
       <div className="bg-black/60 p-8 rounded-xl backdrop-blur-sm max-w-2xl mx-auto mt-20">
         <h1 className="text-3xl font-bold mb-8 text-center text-yellow-500">📋 팀 편성 리스트</h1>
@@ -125,7 +115,7 @@ const PartyListPage = ({ parties }) => {
   );
 };
 
-// --- [6] 상세 페이지 ---
+// --- [5] 상세 페이지 ---
 const PartyEditPage = ({ parties, handleUpdateSlot }) => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -134,7 +124,7 @@ const PartyEditPage = ({ parties, handleUpdateSlot }) => {
 
   const [modalState, setModalState] = useState({ 
     isOpen: false, 
-    type: null, 
+    type: null, // 'char' | 'equip'
     slotIndex: null, 
     equipIndex: null 
   });
@@ -143,10 +133,6 @@ const PartyEditPage = ({ parties, handleUpdateSlot }) => {
   const allUsedEquipIds = parties.flatMap(p => p.slots.flatMap(s => s.equipments.filter(e => e).map(e => e.id)));
 
   const onCharClick = (slotIndex) => {
-    if (modalState.isOpen && modalState.slotIndex === slotIndex && modalState.type === 'char') {
-      closeModal();
-      return;
-    }
     if (party.slots[slotIndex].character) {
       if(window.confirm("캐릭터를 파티에서 제외하시겠습니까?")) {
         handleUpdateSlot(party.id, slotIndex, 'character', null);
@@ -185,14 +171,12 @@ const PartyEditPage = ({ parties, handleUpdateSlot }) => {
   if (!party) return <div>파티를 찾을 수 없습니다.</div>;
 
   return (
-    // [변경] 배경 이미지 적용 (BG.png)
     <div 
       className="flex min-h-screen text-white bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: "url('/morimenz_party/images/BG.png')" }}
     >
       
       {/* --- SIDEBAR --- */}
-      {/* 배경이 보일 수 있게 반투명 처리 (bg-slate-950/80) */}
       <div className="w-16 md:w-20 bg-slate-950/80 border-r border-slate-700/50 flex flex-col items-center py-6 gap-6 fixed h-full z-10 backdrop-blur-sm">
         <button onClick={() => navigate('/')} className="mb-4 text-slate-400 hover:text-white p-2 rounded-full hover:bg-slate-800 transition-colors">
           <Home size={24} />
@@ -217,7 +201,6 @@ const PartyEditPage = ({ parties, handleUpdateSlot }) => {
 
       {/* --- MAIN CONTENT --- */}
       <div className="flex-1 ml-16 md:ml-20 p-4 flex flex-col items-center justify-center min-h-screen">
-        {/* 상단 타이틀 (배경이 어두우므로 살짝 강조) */}
         <div className="w-full max-w-4xl flex items-center mb-6 pl-4">
           <h2 className="text-2xl font-bold text-yellow-500 border-l-4 border-yellow-600 pl-4 drop-shadow-md">
             {party.name} 편성
@@ -225,87 +208,73 @@ const PartyEditPage = ({ parties, handleUpdateSlot }) => {
         </div>
 
         <div className="grid grid-cols-4 gap-4 w-full max-w-5xl px-2">
-          {party.slots.map((slot, index) => {
-            const isSelectingChar = modalState.isOpen && modalState.type === 'char' && modalState.slotIndex === index;
-
-            return (
-              <div 
-                key={index} 
-                onClick={() => onCharClick(index)} 
-                className={`
-                  relative w-full max-w-[500px] aspect-[5/9] mx-auto border-2 rounded-lg cursor-pointer flex flex-col group transition-all backdrop-blur-[2px]
-                  ${slot.character 
-                    ? 'border-yellow-600 bg-slate-900/90' // 캐릭터 있으면 진하게 
-                    : 'border-slate-500/50 bg-black/40 hover:border-yellow-400 hover:bg-black/60'} // 없으면 투명하게
-                `}
-              >
-                {isSelectingChar ? (
-                  <OverlaySelector 
-                    data={characterData} 
-                    onSelect={handleSelect} 
-                    onClose={closeModal} 
-                    usedIds={allUsedCharIds} 
-                  />
-                ) : (
+          {party.slots.map((slot, index) => (
+            <div 
+              key={index} 
+              onClick={() => onCharClick(index)} 
+              className={`
+                relative w-full max-w-[500px] aspect-[5/9] mx-auto border-2 rounded-lg cursor-pointer flex flex-col group transition-all backdrop-blur-[2px]
+                ${slot.character 
+                  ? 'border-yellow-600 bg-slate-900/90' 
+                  : 'border-slate-500/50 bg-black/40 hover:border-yellow-400 hover:bg-black/60'}
+              `}
+            >
+              <div className="h-[80%] flex items-center justify-center relative overflow-hidden">
+                {slot.character ? (
                   <>
-                    <div className="h-[80%] flex items-center justify-center relative overflow-hidden">
-                      {slot.character ? (
-                        <>
-                          <img src={slot.character.img} alt={slot.character.name} className="w-full h-full object-cover"/>
-                          <div className="absolute bottom-0 w-full bg-black/60 p-1 text-center">
-                            <span className="font-bold text-sm">{slot.character.name}</span>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="text-slate-400/70 flex flex-col items-center">
-                          <User size={48} strokeWidth={1} />
-                          <span className="text-sm mt-2">터치하여 추가</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="h-[20%] bg-black/60 border-t border-slate-600/50 p-1 flex justify-center items-center gap-4">
-                      {[0, 1].map((equipIdx) => (
-                        <div 
-                          key={equipIdx} 
-                          onClick={(e) => onEquipClick(e, index, equipIdx)} 
-                          className={`
-                            h-[90%] aspect-[1/2] max-w-[150px] 
-                            border rounded flex items-center justify-center overflow-hidden transition-colors 
-                            ${slot.equipments[equipIdx] ? 'border-yellow-500' : 'bg-black/40 border-slate-500/50 hover:border-yellow-300'}
-                          `}
-                        >
-                          {slot.equipments[equipIdx] ? (
-                            <img src={slot.equipments[equipIdx].img} alt="장비" className="w-full h-full object-cover" />
-                          ) : (
-                            (equipIdx === 0 ? <Sword size={14} className="text-slate-500" /> : <Shield size={14} className="text-slate-500" />)
-                          )}
-                        </div>
-                      ))}
+                    <img src={slot.character.img} alt={slot.character.name} className="w-full h-full object-cover"/>
+                    <div className="absolute bottom-0 w-full bg-black/60 p-1 text-center">
+                      <span className="font-bold text-sm">{slot.character.name}</span>
                     </div>
                   </>
+                ) : (
+                  <div className="text-slate-400/70 flex flex-col items-center">
+                    <User size={48} strokeWidth={1} />
+                    <span className="text-sm mt-2">터치하여 추가</span>
+                  </div>
                 )}
               </div>
-            );
-          })}
+
+              <div className="h-[20%] bg-black/60 border-t border-slate-600/50 p-1 flex justify-center items-center gap-4">
+                {[0, 1].map((equipIdx) => (
+                  <div 
+                    key={equipIdx} 
+                    onClick={(e) => onEquipClick(e, index, equipIdx)} 
+                    className={`
+                      h-[90%] aspect-[1/2] max-w-[150px] 
+                      border rounded flex items-center justify-center overflow-hidden transition-colors 
+                      ${slot.equipments[equipIdx] ? 'border-yellow-500' : 'bg-black/40 border-slate-500/50 hover:border-yellow-300'}
+                    `}
+                  >
+                    {slot.equipments[equipIdx] ? (
+                      <img src={slot.equipments[equipIdx].img} alt="장비" className="w-full h-full object-cover" />
+                    ) : (
+                      (equipIdx === 0 ? <Sword size={14} className="text-slate-500" /> : <Shield size={14} className="text-slate-500" />)
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {modalState.type === 'equip' && (
-        <SelectionModal 
-          isOpen={modalState.isOpen}
-          onClose={closeModal}
-          title="장비"
-          data={equipmentData}
-          onSelect={handleSelect}
-          usedIds={allUsedEquipIds}
-        />
-      )}
+      {/* --- 통합 모달 렌더링 --- */}
+      <SelectionModal 
+        isOpen={modalState.isOpen}
+        onClose={closeModal}
+        // [변경] 명칭 변경: 장비 -> 명륜 선택
+        title={modalState.type === 'char' ? '캐릭터 선택' : '명륜 선택'}
+        data={modalState.type === 'char' ? characterData : equipmentData}
+        onSelect={handleSelect}
+        usedIds={modalState.type === 'char' ? allUsedCharIds : allUsedEquipIds}
+        type={modalState.type}
+      />
     </div>
   );
 };
 
-// --- [7] 앱 메인 로직 ---
+// --- [6] 앱 메인 로직 ---
 function App() {
   const [parties, setParties] = useState(INITIAL_DATA);
 
