@@ -1,0 +1,7 @@
+[
+  { "id": 601, "name": "원더랜드", "stats": "치명타", "img": "/images/myeongryun/601.png" },
+  { "id": 602, "name": "멋진 신세계", "stats": "궁극기 위력", "img": "/images/myeongryun/601.png" },
+  { "id": 603, "name": "땅따먹기", "stats": "피해 증가", "img": "/images/myeongryun/601.png" },
+  { "id": 604, "name": "밤의 모독자", "stats": "상태이상 추가타", "img": "/images/myeongryun/601.png" },
+  { "id": 605, "name": "호기심쟁이", "stats": "치유량", "img": "/images/myeongryun/601.png" }
+]
