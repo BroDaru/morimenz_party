@@ -188,7 +188,7 @@ const PartyEditPage = ({ parties, handleUpdateSlot }) => {
     // [변경] 배경 이미지 적용 (BG.png)
     <div 
       className="flex min-h-screen text-white bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: "url('/images/BG.png')" }}
+      style={{ backgroundImage: "url('/morimenz_party/images/BG.png')" }}
     >
       
       {/* --- SIDEBAR --- */}
