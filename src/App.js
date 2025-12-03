@@ -355,7 +355,7 @@ function App() {
   };
 
   return (
-    <Router>
+    <Router basename="/morimenz_party">
       <Routes>
         <Route path="/" element={<PartyListPage parties={parties} />} />
         <Route path="/party/:id" element={<PartyEditPage parties={parties} handleUpdateSlot={handleUpdateSlot} />} />
