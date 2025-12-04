@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
-import { Shield, Sword, User, X, Home } from 'lucide-react';
+// [변경] Sword, Shield 대신 Settings 아이콘 import
+import { User, X, Home, Edit3, Settings } from 'lucide-react';
 
 // --- [1] JSON 데이터 임포트 ---
 import characterData from './data/character.json';
@@ -23,17 +24,13 @@ const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V"];
 const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type }) => {
   if (!isOpen) return null;
 
-  // [수정 1] 명륜 선택 시 한 줄에 6개씩 보여줘서 크기를 150px 정도로 줄임 (grid-cols-6)
   const gridClass = type === 'char' ? 'grid-cols-3' : 'grid-cols-4 md:grid-cols-5 lg:grid-cols-6';
-  
-  // [수정 2] 명륜 이미지 비율을 150x300 (1:2)로 변경
   const aspectClass = type === 'char' ? 'aspect-[5/9]' : 'aspect-[1/2]';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-slate-900 w-full max-w-6xl rounded-xl border-2 border-slate-600 shadow-2xl overflow-hidden m-4 flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
         
-        {/* 헤더 */}
         <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-950">
           <h3 className="text-2xl font-bold text-yellow-500">{title}</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-white p-2">
@@ -41,7 +38,6 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
           </button>
         </div>
 
-        {/* 리스트 영역 */}
         <div className="p-6 overflow-y-auto scrollbar-hide flex-1">
           <div className={`grid ${gridClass} gap-4`}>
             {data.map((item) => {
@@ -59,7 +55,6 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
                     }
                   `}
                 >
-                  {/* 이미지 영역 */}
                   <div className={`w-full ${aspectClass} bg-slate-950 relative`}>
                      <img 
                        src={item.img} 
@@ -74,7 +69,6 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
                      </div>
                   </div>
                   
-                  {/* 사용 중 배지 */}
                   {isUsed && (
                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                       <span className="bg-red-600 text-white font-bold px-3 py-1 rounded text-sm border border-red-400">
@@ -115,7 +109,7 @@ const PartyListPage = ({ parties }) => {
 };
 
 // --- [5] 상세 페이지 ---
-const PartyEditPage = ({ parties, handleUpdateSlot }) => {
+const PartyEditPage = ({ parties, handleUpdateSlot, renameParty }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const currentId = parseInt(id);
@@ -167,6 +161,13 @@ const PartyEditPage = ({ parties, handleUpdateSlot }) => {
     setModalState({ isOpen: false, type: null, slotIndex: null, equipIndex: null });
   };
 
+  const onRenameClick = () => {
+    const newName = window.prompt("새로운 파티 이름을 입력해주세요:", party.name);
+    if (newName && newName.trim() !== "") {
+      renameParty(party.id, newName.trim());
+    }
+  };
+
   if (!party) return <div>파티를 찾을 수 없습니다.</div>;
 
   return (
@@ -197,10 +198,20 @@ const PartyEditPage = ({ parties, handleUpdateSlot }) => {
       </div>
 
       <div className="flex-1 ml-16 md:ml-20 p-4 flex flex-col items-center justify-center min-h-screen">
-        <div className="w-full max-w-4xl flex items-center mb-6 pl-4">
-          <h2 className="text-2xl font-bold text-yellow-500 border-l-4 border-yellow-600 pl-4 drop-shadow-md">
-            {party.name} 편성
-          </h2>
+        
+        <div className="w-full max-w-4xl flex items-center mb-6 pl-4 gap-3">
+          <div className="flex items-center gap-3 border-l-4 border-yellow-600 pl-4">
+            <h2 className="text-2xl font-bold text-yellow-500 drop-shadow-md">
+              {party.name} 편성
+            </h2>
+            <button 
+              onClick={onRenameClick} 
+              className="text-slate-400 hover:text-yellow-400 hover:bg-slate-800/50 p-1.5 rounded-full transition-all"
+              title="파티 이름 변경"
+            >
+              <Edit3 size={18} />
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-4 gap-4 w-full max-w-5xl px-2">
@@ -215,7 +226,6 @@ const PartyEditPage = ({ parties, handleUpdateSlot }) => {
                   : 'border-slate-500/50 bg-black/40 hover:border-yellow-400 hover:bg-black/60'}
               `}
             >
-              {/* [수정 3] 상단(캐릭터) 영역 줄임: 80% -> 65% */}
               <div className="h-[65%] flex items-center justify-center relative overflow-hidden">
                 {slot.character ? (
                   <>
@@ -232,23 +242,22 @@ const PartyEditPage = ({ parties, handleUpdateSlot }) => {
                 )}
               </div>
 
-              {/* [수정 4] 하단(명륜) 영역 늘림: 20% -> 35% */}
               <div className="h-[35%] bg-black/60 border-t border-slate-600/50 p-1 flex justify-center items-center gap-4">
                 {[0, 1].map((equipIdx) => (
                   <div 
                     key={equipIdx} 
                     onClick={(e) => onEquipClick(e, index, equipIdx)} 
-                    // [수정 5] 명륜 슬롯 크기/비율 고정: 150x300 (aspect-[1/2])
                     className={`
                       h-[95%] aspect-[1/2] 
                       border rounded flex items-center justify-center overflow-hidden transition-colors 
                       ${slot.equipments[equipIdx] ? 'border-yellow-500' : 'bg-black/40 border-slate-500/50 hover:border-yellow-300'}
                     `}
                   >
+                    {/* [변경] 명륜이 없을 때 Settings 아이콘 표시 */}
                     {slot.equipments[equipIdx] ? (
                       <img src={slot.equipments[equipIdx].img} alt="명륜" className="w-full h-full object-cover" />
                     ) : (
-                      (equipIdx === 0 ? <Sword size={18} className="text-slate-500" /> : <Shield size={18} className="text-slate-500" />)
+                      <Settings size={20} className="text-slate-500/70" />
                     )}
                   </div>
                 ))}
@@ -285,6 +294,14 @@ function App() {
   useEffect(() => {
     localStorage.setItem('morimenz_party_data', JSON.stringify(parties));
   }, [parties]);
+
+  const renameParty = (partyId, newName) => {
+    setParties(prevParties => 
+      prevParties.map(p => 
+        p.id === partyId ? { ...p, name: newName } : p
+      )
+    );
+  };
 
   const handleUpdateSlot = (partyId, slotIndex, type, data, equipIndex = 0) => {
     setParties(prevParties => {
@@ -335,7 +352,7 @@ function App() {
     <Router basename="/morimenz_party">
       <Routes>
         <Route path="/" element={<PartyListPage parties={parties} />} />
-        <Route path="/party/:id" element={<PartyEditPage parties={parties} handleUpdateSlot={handleUpdateSlot} />} />
+        <Route path="/party/:id" element={<PartyEditPage parties={parties} handleUpdateSlot={handleUpdateSlot} renameParty={renameParty} />} />
       </Routes>
     </Router>
   );
