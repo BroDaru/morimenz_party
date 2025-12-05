@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
-import { User, X, Home, Edit3, Settings, Search } from 'lucide-react';
+import { User, X, Home, Edit3, Settings, Search, RotateCcw } from 'lucide-react';
 
 // --- [1] JSON 데이터 임포트 ---
 import characterData from './data/character.json';
@@ -27,7 +27,8 @@ const ELEMENT_ICONS = {
   "Ultra": "/morimenz_party/images/ultra.png"
 };
 
-const ROLE_ORDER = ["방어형", "데미지형", "보조형"];
+// [수정] 요청하신 순서대로 변경 (데미지형 -> 방어형 -> 보조형)
+const ROLE_ORDER = ["데미지형", "방어형", "보조형"];
 
 // --- [3] 통합 선택 모달 ---
 const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type }) => {
@@ -225,7 +226,7 @@ const PartyListPage = ({ parties }) => {
 };
 
 // --- [5] 상세 페이지 ---
-const PartyEditPage = ({ parties, handleUpdateSlot, renameParty }) => {
+const PartyEditPage = ({ parties, handleUpdateSlot, renameParty, resetParty }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const currentId = parseInt(id);
@@ -284,6 +285,10 @@ const PartyEditPage = ({ parties, handleUpdateSlot, renameParty }) => {
     }
   };
 
+  const onResetClick = () => {
+    resetParty(party.id);
+  };
+
   if (!party) return <div>파티를 찾을 수 없습니다.</div>;
 
   return (
@@ -316,16 +321,23 @@ const PartyEditPage = ({ parties, handleUpdateSlot, renameParty }) => {
       <div className="flex-1 ml-16 md:ml-20 p-4 flex flex-col items-center justify-center min-h-screen">
         
         <div className="w-full max-w-4xl flex items-center mb-6 pl-4 gap-3">
-          <div className="flex items-center gap-3 border-l-4 border-yellow-600 pl-4">
+          <div className="flex items-center gap-2 border-l-4 border-yellow-600 pl-4">
             <h2 className="text-2xl font-bold text-yellow-500 drop-shadow-md">
               {party.name} 편성
             </h2>
             <button 
               onClick={onRenameClick} 
-              className="text-slate-400 hover:text-yellow-400 hover:bg-slate-800/50 p-1.5 rounded-full transition-all"
+              className="text-slate-400 hover:text-yellow-400 hover:bg-slate-800/50 p-1.5 rounded-full transition-all ml-2"
               title="파티 이름 변경"
             >
-              <Edit3 size={18} />
+              <Edit3 size={20} />
+            </button>
+            <button 
+              onClick={onResetClick} 
+              className="text-slate-400 hover:text-red-500 hover:bg-slate-800/50 p-1.5 rounded-full transition-all"
+              title="파티 초기화"
+            >
+              <RotateCcw size={20} />
             </button>
           </div>
         </div>
@@ -373,7 +385,6 @@ const PartyEditPage = ({ parties, handleUpdateSlot, renameParty }) => {
                         </div>
                       </div>
 
-                      {/* [수정] 배경 투명도 30%로 변경 (bg-black/30) */}
                       <div className="h-[35%] border-t border-slate-600/30 p-1 flex justify-center items-center gap-4 bg-black/30">
                         {[0, 1].map((equipIdx) => (
                           <div 
@@ -452,6 +463,26 @@ function App() {
     );
   };
 
+  const resetParty = (partyId) => {
+    if (!window.confirm("정말로 이 파티를 초기화하시겠습니까?\n배치된 모든 캐릭터와 명륜이 삭제됩니다.")) {
+      return;
+    }
+
+    setParties(prevParties => 
+      prevParties.map(p => {
+        if (p.id !== partyId) return p;
+        return {
+          ...p,
+          slots: Array.from({ length: 4 }, (_, j) => ({
+            id: j,
+            character: null,
+            equipments: [null, null]
+          }))
+        };
+      })
+    );
+  };
+
   const handleUpdateSlot = (partyId, slotIndex, type, data, equipIndex = 0) => {
     setParties(prevParties => {
       if (data === null) return applyUpdate(prevParties, partyId, slotIndex, type, null, equipIndex);
@@ -501,7 +532,7 @@ function App() {
     <Router basename="/morimenz_party">
       <Routes>
         <Route path="/" element={<PartyListPage parties={parties} />} />
-        <Route path="/party/:id" element={<PartyEditPage parties={parties} handleUpdateSlot={handleUpdateSlot} renameParty={renameParty} />} />
+        <Route path="/party/:id" element={<PartyEditPage parties={parties} handleUpdateSlot={handleUpdateSlot} renameParty={renameParty} resetParty={resetParty} />} />
       </Routes>
     </Router>
   );
