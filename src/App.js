@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
-import { User, X, Home, Edit3, Settings, Search, Filter } from 'lucide-react';
+import { User, X, Home, Edit3, Settings, Search } from 'lucide-react';
 
 // --- [1] JSON 데이터 임포트 ---
 import characterData from './data/character.json';
@@ -19,49 +19,56 @@ const INITIAL_DATA = Array.from({ length: 5 }, (_, i) => ({
 
 const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V"];
 
-// --- [3] 통합 선택 모달 (검색 & 필터 기능 추가) ---
-const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type }) => {
-  // 상태 관리: 검색어, 속성 필터, 역할 필터
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedElement, setSelectedElement] = useState("All");
-  const [selectedRole, setSelectedRole] = useState("All");
+// [수정] 1. 속성 순서 정의 (요청하신 순서대로)
+const ELEMENT_ORDER = ["Chaos", "Aequor", "Caro", "Ultra"];
 
-  // 모달이 열릴 때마다 필터 초기화
+// [수정] 2. 아이콘 경로 매핑 (대소문자 처리를 위해 키는 TitleCase 권장)
+const ELEMENT_ICONS = {
+  "Chaos": "/morimenz_party/images/chaos.png",
+  "Aequor": "/morimenz_party/images/aequor.png",
+  "Caro": "/morimenz_party/images/caro.png",
+  "Ultra": "/morimenz_party/images/ultra.png"
+};
+
+// --- [3] 통합 선택 모달 ---
+const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type }) => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedElement, setSelectedElement] = useState(null);
+  const [selectedRole, setSelectedRole] = useState(null);
+
   useEffect(() => {
     if (isOpen) {
       setSearchTerm("");
-      setSelectedElement("All");
-      setSelectedRole("All");
+      setSelectedElement(null);
+      setSelectedRole(null);
     }
   }, [isOpen]);
 
-  // [필터 옵션 추출] 데이터에서 중복 제거하여 필터 목록 생성 (캐릭터일 때만)
-  const elements = useMemo(() => {
-    if (type !== 'char') return [];
-    const uniqueElements = [...new Set(data.map(item => item.element))].filter(Boolean);
-    return ["All", ...uniqueElements];
-  }, [data, type]);
-
-  const roles = useMemo(() => {
-    if (type !== 'char') return [];
-    const uniqueRoles = [...new Set(data.map(item => item.role))].filter(Boolean);
-    return ["All", ...uniqueRoles];
-  }, [data, type]);
-
   if (!isOpen) return null;
 
-  // [핵심] 필터링 로직: 이름 + 속성 + 역할 모두 만족해야 함
+  // [수정] 3. 필터링 로직 개선 ("All" 속성 처리)
   const filteredData = data.filter(item => {
+    // 1. 이름 검색
     const matchName = item.name.toLowerCase().includes(searchTerm.toLowerCase());
     
-    // 캐릭터가 아니면(명륜이면) 속성/역할 검사 통과 처리
     if (type !== 'char') return matchName;
 
-    const matchElement = selectedElement === "All" || item.element === selectedElement;
-    const matchRole = selectedRole === "All" || item.role === selectedRole;
+    // 2. 속성 필터 (item.element가 'All'이면 무조건 통과)
+    const charElement = item.element ? item.element.toLowerCase() : "";
+    const isAllElement = charElement === "all"; 
+    
+    const matchElement = !selectedElement || 
+                         isAllElement || 
+                         charElement === selectedElement.toLowerCase();
+
+    // 3. 역할 필터
+    const matchRole = !selectedRole || item.role === selectedRole;
 
     return matchName && matchElement && matchRole;
   });
+
+  // 역할 목록 추출
+  const roles = type === 'char' ? [...new Set(data.map(item => item.role))].filter(Boolean) : [];
 
   const gridClass = type === 'char' ? 'grid-cols-4' : 'grid-cols-4 md:grid-cols-5 lg:grid-cols-6';
   const aspectClass = type === 'char' ? 'aspect-[5/9]' : 'aspect-[1/2]';
@@ -79,50 +86,58 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
             </button>
           </div>
 
-          {/* 검색 및 필터 컨트롤 영역 */}
-          <div className="flex flex-col md:flex-row gap-2">
-            {/* 1. 검색창 */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
-              <input 
-                type="text" 
-                placeholder={`${title === '캐릭터 선택' ? '캐릭터' : '명륜'} 이름 검색...`} 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-600 text-white pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:border-yellow-500 transition-colors"
-                autoFocus
-              />
-            </div>
-
-            {/* 2. 필터 (캐릭터일 때만 표시) */}
-            {type === 'char' && (
-              <div className="flex gap-2">
-                {/* 속성 필터 */}
-                <div className="relative">
-                  <select 
-                    value={selectedElement}
-                    onChange={(e) => setSelectedElement(e.target.value)}
-                    className="appearance-none bg-slate-800 border border-slate-600 text-white pl-8 pr-8 py-2 rounded-lg focus:outline-none focus:border-yellow-500 cursor-pointer"
-                  >
-                    {elements.map(el => <option key={el} value={el}>{el === 'All' ? '모든 속성' : el}</option>)}
-                  </select>
-                  <Filter className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
-                </div>
-
-                {/* 역할 필터 */}
-                <div className="relative">
-                  <select 
-                    value={selectedRole}
-                    onChange={(e) => setSelectedRole(e.target.value)}
-                    className="appearance-none bg-slate-800 border border-slate-600 text-white pl-8 pr-8 py-2 rounded-lg focus:outline-none focus:border-yellow-500 cursor-pointer"
-                  >
-                    {roles.map(r => <option key={r} value={r}>{r === 'All' ? '모든 역할' : r}</option>)}
-                  </select>
-                  <User className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
-                </div>
-              </div>
-            )}
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+            <input 
+              type="text" 
+              placeholder={`${title === '캐릭터 선택' ? '캐릭터' : '명륜'} 이름 검색...`} 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-slate-800 border border-slate-600 text-white pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:border-yellow-500 transition-colors"
+            />
           </div>
+
+          {type === 'char' && (
+            <div className="flex flex-col gap-3">
+              
+              {/* [수정] 4. 정의된 순서(ELEMENT_ORDER)대로 버튼 렌더링 */}
+              <div className="flex gap-2">
+                {ELEMENT_ORDER.map((element) => (
+                  <button
+                    key={element}
+                    onClick={() => setSelectedElement(prev => prev === element ? null : element)}
+                    className={`
+                      w-10 h-10 rounded-full border-2 overflow-hidden transition-all p-1 bg-slate-800
+                      ${selectedElement === element 
+                        ? 'border-yellow-500 bg-yellow-900/30 scale-110 shadow-[0_0_10px_rgba(234,179,8,0.5)]' 
+                        : 'border-slate-600 hover:border-slate-400 opacity-70 hover:opacity-100'}
+                    `}
+                    title={element}
+                  >
+                    {/* ELEMENT_ICONS에서 이미지 주소 가져오기 */}
+                    <img src={ELEMENT_ICONS[element]} alt={element} className="w-full h-full object-contain" />
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+                {roles.map(role => (
+                  <button
+                    key={role}
+                    onClick={() => setSelectedRole(prev => prev === role ? null : role)}
+                    className={`
+                      px-3 py-1 rounded-full text-xs font-bold border transition-all whitespace-nowrap
+                      ${selectedRole === role
+                        ? 'bg-yellow-600 text-white border-yellow-500'
+                        : 'bg-slate-800 text-slate-400 border-slate-600 hover:border-slate-400 hover:text-white'}
+                    `}
+                  >
+                    {role}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 리스트 영역 */}
@@ -131,6 +146,9 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
             <div className={`grid ${gridClass} gap-4`}>
               {filteredData.map((item) => {
                 const isUsed = usedIds.includes(item.id);
+                // [수정] 대소문자 매칭을 위해 변환
+                const elKey = item.element ? item.element.charAt(0).toUpperCase() + item.element.slice(1).toLowerCase() : "";
+                
                 return (
                   <button
                     key={item.id}
@@ -151,6 +169,14 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
                          className="w-full h-full object-cover" 
                          loading="lazy"
                        />
+                       {/* 속성 아이콘 표시 (All 속성은 아이콘 표시 안 함 or 모든 아이콘 표시 등 선택 가능. 여기선 매칭되는 것만) */}
+                       {type === 'char' && ELEMENT_ICONS[elKey] && (
+                         <img 
+                           src={ELEMENT_ICONS[elKey]} 
+                           alt={item.element}
+                           className="absolute top-1 right-1 w-6 h-6 drop-shadow-md"
+                         />
+                       )}
                        <div className="absolute bottom-0 w-full bg-black/70 p-2 text-center">
                          <span className="text-sm font-bold text-white truncate block">
                            {item.name}
@@ -172,7 +198,7 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
           ) : (
             <div className="text-center text-slate-500 py-10 flex flex-col items-center gap-2">
               <Search size={48} className="opacity-20" />
-              <span>검색 결과가 없습니다.</span>
+              <span>조건에 맞는 결과가 없습니다.</span>
             </div>
           )}
         </div>
@@ -310,54 +336,69 @@ const PartyEditPage = ({ parties, handleUpdateSlot, renameParty }) => {
         </div>
 
         <div className="grid grid-cols-4 gap-4 w-full max-w-5xl px-2">
-          {party.slots.map((slot, index) => (
-            <div 
-              key={index} 
-              onClick={() => onCharClick(index)} 
-              className={`
-                relative w-full max-w-[500px] aspect-[5/9] mx-auto border-2 rounded-lg cursor-pointer flex flex-col group transition-all backdrop-blur-[2px]
-                ${slot.character 
-                  ? 'border-yellow-600 bg-slate-900/90' 
-                  : 'border-slate-500/50 bg-black/40 hover:border-yellow-400 hover:bg-black/60'}
-              `}
-            >
-              <div className="h-[65%] flex items-center justify-center relative overflow-hidden">
-                {slot.character ? (
-                  <>
-                    <img src={slot.character.img} alt={slot.character.name} className="w-full h-full object-cover"/>
-                    <div className="absolute bottom-0 w-full bg-black/60 p-1 text-center">
-                      <span className="font-bold text-sm">{slot.character.name}</span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-slate-400/70 flex flex-col items-center">
-                    <User size={48} strokeWidth={1} />
-                    <span className="text-sm mt-2">터치하여 추가</span>
-                  </div>
-                )}
-              </div>
+          {party.slots.map((slot, index) => {
+            // [수정] 대소문자 매칭을 위해 변환
+            const elKey = slot.character?.element 
+              ? slot.character.element.charAt(0).toUpperCase() + slot.character.element.slice(1).toLowerCase() 
+              : "";
 
-              <div className="h-[35%] bg-black/60 border-t border-slate-600/50 p-1 flex justify-center items-center gap-4">
-                {[0, 1].map((equipIdx) => (
-                  <div 
-                    key={equipIdx} 
-                    onClick={(e) => onEquipClick(e, index, equipIdx)} 
-                    className={`
-                      h-[95%] aspect-[1/2] 
-                      border rounded flex items-center justify-center overflow-hidden transition-colors 
-                      ${slot.equipments[equipIdx] ? 'border-yellow-500' : 'bg-black/40 border-slate-500/50 hover:border-yellow-300'}
-                    `}
-                  >
-                    {slot.equipments[equipIdx] ? (
-                      <img src={slot.equipments[equipIdx].img} alt="명륜" className="w-full h-full object-cover" />
-                    ) : (
-                      <Settings size={20} className="text-slate-500/70" />
-                    )}
-                  </div>
-                ))}
+            return (
+              <div 
+                key={index} 
+                onClick={() => onCharClick(index)} 
+                className={`
+                  relative w-full max-w-[500px] aspect-[5/9] mx-auto border-2 rounded-lg cursor-pointer flex flex-col group transition-all backdrop-blur-[2px]
+                  ${slot.character 
+                    ? 'border-yellow-600 bg-slate-900/90' 
+                    : 'border-slate-500/50 bg-black/40 hover:border-yellow-400 hover:bg-black/60'}
+                `}
+              >
+                <div className="h-[65%] flex items-center justify-center relative overflow-hidden">
+                  {slot.character ? (
+                    <>
+                      <img src={slot.character.img} alt={slot.character.name} className="w-full h-full object-cover"/>
+                      {/* 메인 화면 속성 아이콘 표시 (All이 아닐 경우 등 조건 추가 가능) */}
+                      {ELEMENT_ICONS[elKey] && (
+                        <img 
+                          src={ELEMENT_ICONS[elKey]} 
+                          alt={slot.character.element} 
+                          className="absolute top-2 left-2 w-6 h-6 md:w-8 md:h-8 drop-shadow-md"
+                        />
+                      )}
+                      <div className="absolute bottom-0 w-full bg-black/60 p-1 text-center">
+                        <span className="font-bold text-sm">{slot.character.name}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-slate-400/70 flex flex-col items-center">
+                      <User size={48} strokeWidth={1} />
+                      <span className="text-sm mt-2">터치하여 추가</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="h-[35%] bg-black/60 border-t border-slate-600/50 p-1 flex justify-center items-center gap-4">
+                  {[0, 1].map((equipIdx) => (
+                    <div 
+                      key={equipIdx} 
+                      onClick={(e) => onEquipClick(e, index, equipIdx)} 
+                      className={`
+                        h-[95%] aspect-[1/2] 
+                        border rounded flex items-center justify-center overflow-hidden transition-colors 
+                        ${slot.equipments[equipIdx] ? 'border-yellow-500' : 'bg-black/40 border-slate-500/50 hover:border-yellow-300'}
+                      `}
+                    >
+                      {slot.equipments[equipIdx] ? (
+                        <img src={slot.equipments[equipIdx].img} alt="명륜" className="w-full h-full object-cover" />
+                      ) : (
+                        <Settings size={20} className="text-slate-500/70" />
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
