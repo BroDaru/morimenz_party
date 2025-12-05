@@ -385,7 +385,7 @@ const PartyEditPage = ({ parties, handleUpdateSlot, renameParty }) => {
                             key={equipIdx} 
                             onClick={(e) => onEquipClick(e, index, equipIdx)} 
                             className={`
-                              h-[95%] aspect-[1/2] 
+                              h-[70%] aspect-[1/2] 
                               border rounded flex items-center justify-center overflow-hidden transition-colors 
                               ${slot.equipments[equipIdx] ? 'border-yellow-500' : 'bg-black/40 border-slate-500/50 hover:border-yellow-300'}
                             `}
