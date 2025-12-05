@@ -174,7 +174,7 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
                        <img 
                          src={item.img} 
                          alt={item.name} 
-                         className="w-full h-full object-cover" 
+                         className="w-full h-full object-cover object-top"
                          loading="lazy"
                        />
                        
