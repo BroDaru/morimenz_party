@@ -349,19 +349,15 @@ const PartyEditPage = ({ parties, handleUpdateSlot, renameParty }) => {
               >
                 {slot.character ? (
                   <>
-                    {/* [수정] 1. 이미지: 카드 전체를 덮도록 변경 (absolute inset-0) */}
                     <img 
                       src={slot.character.img} 
                       alt={slot.character.name} 
                       className="absolute inset-0 w-full h-full object-cover object-top z-0 opacity-90 group-hover:opacity-100 transition-opacity"
                     />
                     
-                    {/* [수정] 2. 콘텐츠 컨테이너: 이미지 위에 올라오도록 z-10 적용 */}
                     <div className="relative z-10 w-full h-full flex flex-col">
                       
-                      {/* 상단 65% 영역 (투명 - 이미지 보임) */}
                       <div className="h-[65%] relative">
-                        {/* 속성 아이콘 */}
                         {ELEMENT_ICONS[elKey] && (
                           <div className="absolute top-2 left-2 w-7 h-7 md:w-8 md:h-8 bg-black/30 rounded-full p-0.5 backdrop-blur-[1px]">
                             <img 
@@ -372,20 +368,19 @@ const PartyEditPage = ({ parties, handleUpdateSlot, renameParty }) => {
                           </div>
                         )}
                         
-                        {/* 이름표 */}
                         <div className="absolute bottom-0 w-full bg-black/60 p-1 text-center backdrop-blur-sm">
                           <span className="font-bold text-sm text-white drop-shadow-md">{slot.character.name}</span>
                         </div>
                       </div>
 
-                      {/* [수정] 3. 하단 35% 명륜 영역 (배경 투명화) */}
-                      <div className="h-[35%] border-t border-slate-600/30 p-1 flex justify-center items-center gap-4 bg-transparent">
+                      {/* [수정] 배경 투명도 30%로 변경 (bg-black/30) */}
+                      <div className="h-[35%] border-t border-slate-600/30 p-1 flex justify-center items-center gap-4 bg-black/30">
                         {[0, 1].map((equipIdx) => (
                           <div 
                             key={equipIdx} 
                             onClick={(e) => onEquipClick(e, index, equipIdx)} 
                             className={`
-                              h-[70%] aspect-[1/2] 
+                              h-[95%] aspect-[1/2] 
                               border rounded flex items-center justify-center overflow-hidden transition-colors 
                               ${slot.equipments[equipIdx] ? 'border-yellow-500' : 'bg-black/40 border-slate-500/50 hover:border-yellow-300'}
                             `}
@@ -401,7 +396,6 @@ const PartyEditPage = ({ parties, handleUpdateSlot, renameParty }) => {
                     </div>
                   </>
                 ) : (
-                  // 빈 슬롯 상태
                   <div className="h-full flex flex-col">
                     <div className="h-[65%] flex items-center justify-center text-slate-400/70">
                       <div className="flex flex-col items-center">
