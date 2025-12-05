@@ -29,7 +29,7 @@ const ELEMENT_ICONS = {
 };
 
 // [수정] 2. 직업(Role) 순서 고정 (게임 UI 기준)
-const ROLE_ORDER = ["방어형", "데미지형", "보조형"];
+const ROLE_ORDER = ["데미지형", "방어형", "보조형"];
 
 // --- [3] 통합 선택 모달 ---
 const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type }) => {
