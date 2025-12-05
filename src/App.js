@@ -19,16 +19,17 @@ const INITIAL_DATA = Array.from({ length: 5 }, (_, i) => ({
 
 const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V"];
 
-// [수정] 1. 속성 순서 정의 (요청하신 순서대로)
+// [수정] 1. 속성 순서 및 아이콘 경로 (배포 주소 포함)
 const ELEMENT_ORDER = ["Chaos", "Aequor", "Caro", "Ultra"];
-
-// [수정] 2. 아이콘 경로 매핑 (대소문자 처리를 위해 키는 TitleCase 권장)
 const ELEMENT_ICONS = {
   "Chaos": "/morimenz_party/images/chaos.png",
   "Aequor": "/morimenz_party/images/aequor.png",
   "Caro": "/morimenz_party/images/caro.png",
   "Ultra": "/morimenz_party/images/ultra.png"
 };
+
+// [수정] 2. 직업(Role) 순서 고정 (게임 UI 기준)
+const ROLE_ORDER = ["방어형", "데미지형", "보조형"];
 
 // --- [3] 통합 선택 모달 ---
 const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type }) => {
@@ -46,29 +47,25 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
 
   if (!isOpen) return null;
 
-  // [수정] 3. 필터링 로직 개선 ("All" 속성 처리)
+  // 필터링 로직
   const filteredData = data.filter(item => {
-    // 1. 이름 검색
     const matchName = item.name.toLowerCase().includes(searchTerm.toLowerCase());
     
     if (type !== 'char') return matchName;
 
-    // 2. 속성 필터 (item.element가 'All'이면 무조건 통과)
     const charElement = item.element ? item.element.toLowerCase() : "";
-    const isAllElement = charElement === "all"; 
+    const isAllElement = charElement === "all";
     
+    // 속성 필터: 선택 안했거나, All 속성이거나, 선택한 속성과 일치하면 통과
     const matchElement = !selectedElement || 
                          isAllElement || 
                          charElement === selectedElement.toLowerCase();
 
-    // 3. 역할 필터
+    // 직업 필터
     const matchRole = !selectedRole || item.role === selectedRole;
 
     return matchName && matchElement && matchRole;
   });
-
-  // 역할 목록 추출
-  const roles = type === 'char' ? [...new Set(data.map(item => item.role))].filter(Boolean) : [];
 
   const gridClass = type === 'char' ? 'grid-cols-4' : 'grid-cols-4 md:grid-cols-5 lg:grid-cols-6';
   const aspectClass = type === 'char' ? 'aspect-[5/9]' : 'aspect-[1/2]';
@@ -86,58 +83,67 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
             </button>
           </div>
 
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
-            <input 
-              type="text" 
-              placeholder={`${title === '캐릭터 선택' ? '캐릭터' : '명륜'} 이름 검색...`} 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-600 text-white pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:border-yellow-500 transition-colors"
-            />
-          </div>
-
-          {type === 'char' && (
-            <div className="flex flex-col gap-3">
-              
-              {/* [수정] 4. 정의된 순서(ELEMENT_ORDER)대로 버튼 렌더링 */}
-              <div className="flex gap-2">
-                {ELEMENT_ORDER.map((element) => (
-                  <button
-                    key={element}
-                    onClick={() => setSelectedElement(prev => prev === element ? null : element)}
-                    className={`
-                      w-10 h-10 rounded-full border-2 overflow-hidden transition-all p-1 bg-slate-800
-                      ${selectedElement === element 
-                        ? 'border-yellow-500 bg-yellow-900/30 scale-110 shadow-[0_0_10px_rgba(234,179,8,0.5)]' 
-                        : 'border-slate-600 hover:border-slate-400 opacity-70 hover:opacity-100'}
-                    `}
-                    title={element}
-                  >
-                    {/* ELEMENT_ICONS에서 이미지 주소 가져오기 */}
-                    <img src={ELEMENT_ICONS[element]} alt={element} className="w-full h-full object-contain" />
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-                {roles.map(role => (
-                  <button
-                    key={role}
-                    onClick={() => setSelectedRole(prev => prev === role ? null : role)}
-                    className={`
-                      px-3 py-1 rounded-full text-xs font-bold border transition-all whitespace-nowrap
-                      ${selectedRole === role
-                        ? 'bg-yellow-600 text-white border-yellow-500'
-                        : 'bg-slate-800 text-slate-400 border-slate-600 hover:border-slate-400 hover:text-white'}
-                    `}
-                  >
-                    {role}
-                  </button>
-                ))}
-              </div>
+          {/* [수정] 검색창 + 필터 버튼을 한 줄(flex-row)로 배치 */}
+          <div className="flex flex-col md:flex-row gap-4 items-center">
+            
+            {/* 검색창 (왼쪽) */}
+            <div className="relative flex-1 w-full">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+              <input 
+                type="text" 
+                placeholder={`${title === '캐릭터 선택' ? '캐릭터' : '명륜'} 이름 검색...`} 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-600 text-white pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:border-yellow-500 transition-colors"
+              />
             </div>
-          )}
+
+            {/* 필터 버튼 영역 (오른쪽 - 캐릭터일 때만) */}
+            {type === 'char' && (
+              <div className="flex items-center gap-4 overflow-x-auto scrollbar-hide pb-1 w-full md:w-auto">
+                
+                {/* 1. 속성 필터 (아이콘 버튼) */}
+                <div className="flex gap-2 shrink-0">
+                  {ELEMENT_ORDER.map((element) => (
+                    <button
+                      key={element}
+                      onClick={() => setSelectedElement(prev => prev === element ? null : element)}
+                      className={`
+                        w-10 h-10 rounded-full border-2 overflow-hidden transition-all p-1 bg-slate-800
+                        ${selectedElement === element 
+                          ? 'border-yellow-500 bg-yellow-900/30 shadow-[0_0_10px_rgba(234,179,8,0.8)] scale-110' 
+                          : 'border-slate-600 hover:border-slate-400 opacity-60 hover:opacity-100'}
+                      `}
+                      title={element}
+                    >
+                      <img src={ELEMENT_ICONS[element]} alt={element} className="w-full h-full object-contain" />
+                    </button>
+                  ))}
+                </div>
+
+                {/* 구분선 (선택사항) */}
+                <div className="w-[1px] h-8 bg-slate-700 mx-1 shrink-0"></div>
+
+                {/* 2. 직업 필터 (텍스트 버튼 - 캡슐 형태) */}
+                <div className="flex gap-2 shrink-0">
+                  {ROLE_ORDER.map(role => (
+                    <button
+                      key={role}
+                      onClick={() => setSelectedRole(prev => prev === role ? null : role)}
+                      className={`
+                        px-3 py-1.5 rounded-full text-xs font-bold border transition-all whitespace-nowrap
+                        ${selectedRole === role
+                          ? 'bg-slate-800 text-yellow-400 border-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.4)]'
+                          : 'bg-slate-800 text-slate-400 border-slate-600 hover:border-slate-400 hover:text-white'}
+                      `}
+                    >
+                      {role}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* 리스트 영역 */}
@@ -146,8 +152,10 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
             <div className={`grid ${gridClass} gap-4`}>
               {filteredData.map((item) => {
                 const isUsed = usedIds.includes(item.id);
-                // [수정] 대소문자 매칭을 위해 변환
-                const elKey = item.element ? item.element.charAt(0).toUpperCase() + item.element.slice(1).toLowerCase() : "";
+                // 대소문자 변환 (JSON의 element 값과 매칭하기 위함)
+                const elKey = item.element 
+                  ? item.element.charAt(0).toUpperCase() + item.element.slice(1).toLowerCase() 
+                  : "";
                 
                 return (
                   <button
@@ -169,14 +177,18 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
                          className="w-full h-full object-cover" 
                          loading="lazy"
                        />
-                       {/* 속성 아이콘 표시 (All 속성은 아이콘 표시 안 함 or 모든 아이콘 표시 등 선택 가능. 여기선 매칭되는 것만) */}
+                       
+                       {/* [수정] 카드 우측 상단 속성 아이콘 (크기 조정 및 위치 미세 조정) */}
                        {type === 'char' && ELEMENT_ICONS[elKey] && (
-                         <img 
-                           src={ELEMENT_ICONS[elKey]} 
-                           alt={item.element}
-                           className="absolute top-1 right-1 w-6 h-6 drop-shadow-md"
-                         />
+                         <div className="absolute top-1 right-1 w-6 h-6 md:w-7 md:h-7 bg-black/40 rounded-full p-0.5 backdrop-blur-[1px]">
+                           <img 
+                             src={ELEMENT_ICONS[elKey]} 
+                             alt={item.element}
+                             className="w-full h-full object-contain drop-shadow-md"
+                           />
+                         </div>
                        )}
+
                        <div className="absolute bottom-0 w-full bg-black/70 p-2 text-center">
                          <span className="text-sm font-bold text-white truncate block">
                            {item.name}
@@ -337,7 +349,7 @@ const PartyEditPage = ({ parties, handleUpdateSlot, renameParty }) => {
 
         <div className="grid grid-cols-4 gap-4 w-full max-w-5xl px-2">
           {party.slots.map((slot, index) => {
-            // [수정] 대소문자 매칭을 위해 변환
+            // 대소문자 변환
             const elKey = slot.character?.element 
               ? slot.character.element.charAt(0).toUpperCase() + slot.character.element.slice(1).toLowerCase() 
               : "";
@@ -357,14 +369,18 @@ const PartyEditPage = ({ parties, handleUpdateSlot, renameParty }) => {
                   {slot.character ? (
                     <>
                       <img src={slot.character.img} alt={slot.character.name} className="w-full h-full object-cover"/>
-                      {/* 메인 화면 속성 아이콘 표시 (All이 아닐 경우 등 조건 추가 가능) */}
+                      
+                      {/* [수정] 메인 화면 속성 아이콘 표시 */}
                       {ELEMENT_ICONS[elKey] && (
-                        <img 
-                          src={ELEMENT_ICONS[elKey]} 
-                          alt={slot.character.element} 
-                          className="absolute top-2 left-2 w-6 h-6 md:w-8 md:h-8 drop-shadow-md"
-                        />
+                        <div className="absolute top-2 left-2 w-7 h-7 md:w-8 md:h-8 bg-black/30 rounded-full p-0.5 backdrop-blur-[1px]">
+                          <img 
+                            src={ELEMENT_ICONS[elKey]} 
+                            alt={slot.character.element} 
+                            className="w-full h-full object-contain drop-shadow-md"
+                          />
+                        </div>
                       )}
+                      
                       <div className="absolute bottom-0 w-full bg-black/60 p-1 text-center">
                         <span className="font-bold text-sm">{slot.character.name}</span>
                       </div>
