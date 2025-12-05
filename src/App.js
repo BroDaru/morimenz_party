@@ -19,7 +19,6 @@ const INITIAL_DATA = Array.from({ length: 5 }, (_, i) => ({
 
 const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V"];
 
-// [수정] 1. 속성 순서 및 아이콘 경로 (배포 주소 포함)
 const ELEMENT_ORDER = ["Chaos", "Aequor", "Caro", "Ultra"];
 const ELEMENT_ICONS = {
   "Chaos": "/morimenz_party/images/chaos.png",
@@ -28,8 +27,7 @@ const ELEMENT_ICONS = {
   "Ultra": "/morimenz_party/images/ultra.png"
 };
 
-// [수정] 2. 직업(Role) 순서 고정 (게임 UI 기준)
-const ROLE_ORDER = ["데미지형", "방어형", "보조형"];
+const ROLE_ORDER = ["방어형", "데미지형", "보조형"];
 
 // --- [3] 통합 선택 모달 ---
 const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type }) => {
@@ -47,7 +45,6 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
 
   if (!isOpen) return null;
 
-  // 필터링 로직
   const filteredData = data.filter(item => {
     const matchName = item.name.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -56,12 +53,10 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
     const charElement = item.element ? item.element.toLowerCase() : "";
     const isAllElement = charElement === "all";
     
-    // 속성 필터: 선택 안했거나, All 속성이거나, 선택한 속성과 일치하면 통과
     const matchElement = !selectedElement || 
                          isAllElement || 
                          charElement === selectedElement.toLowerCase();
 
-    // 직업 필터
     const matchRole = !selectedRole || item.role === selectedRole;
 
     return matchName && matchElement && matchRole;
@@ -74,7 +69,6 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-slate-900 w-full max-w-6xl rounded-xl border-2 border-slate-600 shadow-2xl overflow-hidden m-4 flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
         
-        {/* 헤더 영역 */}
         <div className="p-4 border-b border-slate-700 bg-slate-950 flex flex-col gap-4">
           <div className="flex justify-between items-center">
             <h3 className="text-2xl font-bold text-yellow-500">{title}</h3>
@@ -83,10 +77,7 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
             </button>
           </div>
 
-          {/* [수정] 검색창 + 필터 버튼을 한 줄(flex-row)로 배치 */}
           <div className="flex flex-col md:flex-row gap-4 items-center">
-            
-            {/* 검색창 (왼쪽) */}
             <div className="relative flex-1 w-full">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
               <input 
@@ -98,11 +89,8 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
               />
             </div>
 
-            {/* 필터 버튼 영역 (오른쪽 - 캐릭터일 때만) */}
             {type === 'char' && (
               <div className="flex items-center gap-4 overflow-x-auto scrollbar-hide pb-1 w-full md:w-auto">
-                
-                {/* 1. 속성 필터 (아이콘 버튼) */}
                 <div className="flex gap-2 shrink-0">
                   {ELEMENT_ORDER.map((element) => (
                     <button
@@ -121,10 +109,8 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
                   ))}
                 </div>
 
-                {/* 구분선 (선택사항) */}
                 <div className="w-[1px] h-8 bg-slate-700 mx-1 shrink-0"></div>
 
-                {/* 2. 직업 필터 (텍스트 버튼 - 캡슐 형태) */}
                 <div className="flex gap-2 shrink-0">
                   {ROLE_ORDER.map(role => (
                     <button
@@ -146,13 +132,11 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
           </div>
         </div>
 
-        {/* 리스트 영역 */}
         <div className="p-6 overflow-y-auto scrollbar-hide flex-1">
           {filteredData.length > 0 ? (
             <div className={`grid ${gridClass} gap-4`}>
               {filteredData.map((item) => {
                 const isUsed = usedIds.includes(item.id);
-                // 대소문자 변환 (JSON의 element 값과 매칭하기 위함)
                 const elKey = item.element 
                   ? item.element.charAt(0).toUpperCase() + item.element.slice(1).toLowerCase() 
                   : "";
@@ -174,11 +158,10 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
                        <img 
                          src={item.img} 
                          alt={item.name} 
-                         className="w-full h-full object-cover object-top"
+                         className="w-full h-full object-cover object-top" 
                          loading="lazy"
                        />
                        
-                       {/* [수정] 카드 우측 상단 속성 아이콘 (크기 조정 및 위치 미세 조정) */}
                        {type === 'char' && ELEMENT_ICONS[elKey] && (
                          <div className="absolute top-1 right-1 w-6 h-6 md:w-7 md:h-7 bg-black/40 rounded-full p-0.5 backdrop-blur-[1px]">
                            <img 
@@ -349,7 +332,6 @@ const PartyEditPage = ({ parties, handleUpdateSlot, renameParty }) => {
 
         <div className="grid grid-cols-4 gap-4 w-full max-w-5xl px-2">
           {party.slots.map((slot, index) => {
-            // 대소문자 변환
             const elKey = slot.character?.element 
               ? slot.character.element.charAt(0).toUpperCase() + slot.character.element.slice(1).toLowerCase() 
               : "";
@@ -365,53 +347,75 @@ const PartyEditPage = ({ parties, handleUpdateSlot, renameParty }) => {
                     : 'border-slate-500/50 bg-black/40 hover:border-yellow-400 hover:bg-black/60'}
                 `}
               >
-                <div className="h-[65%] flex items-center justify-center relative overflow-hidden">
-                  {slot.character ? (
-                    <>
-                      <img src={slot.character.img} alt={slot.character.name} className="w-full h-full object-cover"/>
+                {slot.character ? (
+                  <>
+                    {/* [수정] 1. 이미지: 카드 전체를 덮도록 변경 (absolute inset-0) */}
+                    <img 
+                      src={slot.character.img} 
+                      alt={slot.character.name} 
+                      className="absolute inset-0 w-full h-full object-cover object-top z-0 opacity-90 group-hover:opacity-100 transition-opacity"
+                    />
+                    
+                    {/* [수정] 2. 콘텐츠 컨테이너: 이미지 위에 올라오도록 z-10 적용 */}
+                    <div className="relative z-10 w-full h-full flex flex-col">
                       
-                      {/* [수정] 메인 화면 속성 아이콘 표시 */}
-                      {ELEMENT_ICONS[elKey] && (
-                        <div className="absolute top-2 left-2 w-7 h-7 md:w-8 md:h-8 bg-black/30 rounded-full p-0.5 backdrop-blur-[1px]">
-                          <img 
-                            src={ELEMENT_ICONS[elKey]} 
-                            alt={slot.character.element} 
-                            className="w-full h-full object-contain drop-shadow-md"
-                          />
+                      {/* 상단 65% 영역 (투명 - 이미지 보임) */}
+                      <div className="h-[65%] relative">
+                        {/* 속성 아이콘 */}
+                        {ELEMENT_ICONS[elKey] && (
+                          <div className="absolute top-2 left-2 w-7 h-7 md:w-8 md:h-8 bg-black/30 rounded-full p-0.5 backdrop-blur-[1px]">
+                            <img 
+                              src={ELEMENT_ICONS[elKey]} 
+                              alt={slot.character.element} 
+                              className="w-full h-full object-contain drop-shadow-md"
+                            />
+                          </div>
+                        )}
+                        
+                        {/* 이름표 */}
+                        <div className="absolute bottom-0 w-full bg-black/60 p-1 text-center backdrop-blur-sm">
+                          <span className="font-bold text-sm text-white drop-shadow-md">{slot.character.name}</span>
                         </div>
-                      )}
-                      
-                      <div className="absolute bottom-0 w-full bg-black/60 p-1 text-center">
-                        <span className="font-bold text-sm">{slot.character.name}</span>
                       </div>
-                    </>
-                  ) : (
-                    <div className="text-slate-400/70 flex flex-col items-center">
-                      <User size={48} strokeWidth={1} />
-                      <span className="text-sm mt-2">터치하여 추가</span>
-                    </div>
-                  )}
-                </div>
 
-                <div className="h-[35%] bg-black/60 border-t border-slate-600/50 p-1 flex justify-center items-center gap-4">
-                  {[0, 1].map((equipIdx) => (
-                    <div 
-                      key={equipIdx} 
-                      onClick={(e) => onEquipClick(e, index, equipIdx)} 
-                      className={`
-                        h-[95%] aspect-[1/2] 
-                        border rounded flex items-center justify-center overflow-hidden transition-colors 
-                        ${slot.equipments[equipIdx] ? 'border-yellow-500' : 'bg-black/40 border-slate-500/50 hover:border-yellow-300'}
-                      `}
-                    >
-                      {slot.equipments[equipIdx] ? (
-                        <img src={slot.equipments[equipIdx].img} alt="명륜" className="w-full h-full object-cover" />
-                      ) : (
-                        <Settings size={20} className="text-slate-500/70" />
-                      )}
+                      {/* [수정] 3. 하단 35% 명륜 영역 (배경 투명화) */}
+                      <div className="h-[35%] border-t border-slate-600/30 p-1 flex justify-center items-center gap-4 bg-transparent">
+                        {[0, 1].map((equipIdx) => (
+                          <div 
+                            key={equipIdx} 
+                            onClick={(e) => onEquipClick(e, index, equipIdx)} 
+                            className={`
+                              h-[95%] aspect-[1/2] 
+                              border rounded flex items-center justify-center overflow-hidden transition-colors 
+                              ${slot.equipments[equipIdx] ? 'border-yellow-500' : 'bg-black/40 border-slate-500/50 hover:border-yellow-300'}
+                            `}
+                          >
+                            {slot.equipments[equipIdx] ? (
+                              <img src={slot.equipments[equipIdx].img} alt="명륜" className="w-full h-full object-cover" />
+                            ) : (
+                              <Settings size={20} className="text-slate-500/70" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  </>
+                ) : (
+                  // 빈 슬롯 상태
+                  <div className="h-full flex flex-col">
+                    <div className="h-[65%] flex items-center justify-center text-slate-400/70">
+                      <div className="flex flex-col items-center">
+                        <User size={48} strokeWidth={1} />
+                        <span className="text-sm mt-2">터치하여 추가</span>
+                      </div>
+                    </div>
+                    <div className="h-[35%] bg-black/30 border-t border-slate-600/50 p-1 flex justify-center items-center gap-4">
+                      {[0, 1].map((idx) => (
+                        <div key={idx} className="h-[95%] aspect-[1/2] border border-slate-600/30 rounded bg-black/20"></div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
