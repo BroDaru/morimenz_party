@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
-// [변경] Sword, Shield 대신 Settings 아이콘 import
-import { User, X, Home, Edit3, Settings } from 'lucide-react';
+import { User, X, Home, Edit3, Settings, Search, Filter } from 'lucide-react';
 
 // --- [1] JSON 데이터 임포트 ---
 import characterData from './data/character.json';
@@ -20,66 +19,162 @@ const INITIAL_DATA = Array.from({ length: 5 }, (_, i) => ({
 
 const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V"];
 
-// --- [3] 통합 선택 모달 ---
+// --- [3] 통합 선택 모달 (검색 & 필터 기능 추가) ---
 const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type }) => {
+  // 상태 관리: 검색어, 속성 필터, 역할 필터
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedElement, setSelectedElement] = useState("All");
+  const [selectedRole, setSelectedRole] = useState("All");
+
+  // 모달이 열릴 때마다 필터 초기화
+  useEffect(() => {
+    if (isOpen) {
+      setSearchTerm("");
+      setSelectedElement("All");
+      setSelectedRole("All");
+    }
+  }, [isOpen]);
+
+  // [필터 옵션 추출] 데이터에서 중복 제거하여 필터 목록 생성 (캐릭터일 때만)
+  const elements = useMemo(() => {
+    if (type !== 'char') return [];
+    const uniqueElements = [...new Set(data.map(item => item.element))].filter(Boolean);
+    return ["All", ...uniqueElements];
+  }, [data, type]);
+
+  const roles = useMemo(() => {
+    if (type !== 'char') return [];
+    const uniqueRoles = [...new Set(data.map(item => item.role))].filter(Boolean);
+    return ["All", ...uniqueRoles];
+  }, [data, type]);
+
   if (!isOpen) return null;
 
-  const gridClass = type === 'char' ? 'grid-cols-3' : 'grid-cols-4 md:grid-cols-5 lg:grid-cols-6';
+  // [핵심] 필터링 로직: 이름 + 속성 + 역할 모두 만족해야 함
+  const filteredData = data.filter(item => {
+    const matchName = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // 캐릭터가 아니면(명륜이면) 속성/역할 검사 통과 처리
+    if (type !== 'char') return matchName;
+
+    const matchElement = selectedElement === "All" || item.element === selectedElement;
+    const matchRole = selectedRole === "All" || item.role === selectedRole;
+
+    return matchName && matchElement && matchRole;
+  });
+
+  const gridClass = type === 'char' ? 'grid-cols-4' : 'grid-cols-4 md:grid-cols-5 lg:grid-cols-6';
   const aspectClass = type === 'char' ? 'aspect-[5/9]' : 'aspect-[1/2]';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-slate-900 w-full max-w-6xl rounded-xl border-2 border-slate-600 shadow-2xl overflow-hidden m-4 flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
         
-        <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-950">
-          <h3 className="text-2xl font-bold text-yellow-500">{title}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-white p-2">
-            <X size={28} />
-          </button>
+        {/* 헤더 영역 */}
+        <div className="p-4 border-b border-slate-700 bg-slate-950 flex flex-col gap-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-2xl font-bold text-yellow-500">{title}</h3>
+            <button onClick={onClose} className="text-slate-400 hover:text-white p-2">
+              <X size={28} />
+            </button>
+          </div>
+
+          {/* 검색 및 필터 컨트롤 영역 */}
+          <div className="flex flex-col md:flex-row gap-2">
+            {/* 1. 검색창 */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+              <input 
+                type="text" 
+                placeholder={`${title === '캐릭터 선택' ? '캐릭터' : '명륜'} 이름 검색...`} 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-600 text-white pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:border-yellow-500 transition-colors"
+                autoFocus
+              />
+            </div>
+
+            {/* 2. 필터 (캐릭터일 때만 표시) */}
+            {type === 'char' && (
+              <div className="flex gap-2">
+                {/* 속성 필터 */}
+                <div className="relative">
+                  <select 
+                    value={selectedElement}
+                    onChange={(e) => setSelectedElement(e.target.value)}
+                    className="appearance-none bg-slate-800 border border-slate-600 text-white pl-8 pr-8 py-2 rounded-lg focus:outline-none focus:border-yellow-500 cursor-pointer"
+                  >
+                    {elements.map(el => <option key={el} value={el}>{el === 'All' ? '모든 속성' : el}</option>)}
+                  </select>
+                  <Filter className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
+                </div>
+
+                {/* 역할 필터 */}
+                <div className="relative">
+                  <select 
+                    value={selectedRole}
+                    onChange={(e) => setSelectedRole(e.target.value)}
+                    className="appearance-none bg-slate-800 border border-slate-600 text-white pl-8 pr-8 py-2 rounded-lg focus:outline-none focus:border-yellow-500 cursor-pointer"
+                  >
+                    {roles.map(r => <option key={r} value={r}>{r === 'All' ? '모든 역할' : r}</option>)}
+                  </select>
+                  <User className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
+        {/* 리스트 영역 */}
         <div className="p-6 overflow-y-auto scrollbar-hide flex-1">
-          <div className={`grid ${gridClass} gap-4`}>
-            {data.map((item) => {
-              const isUsed = usedIds.includes(item.id);
-              return (
-                <button
-                  key={item.id}
-                  disabled={isUsed}
-                  onClick={() => onSelect(item)}
-                  className={`
-                    relative group flex flex-col items-center rounded-lg border-2 transition-all overflow-hidden
-                    ${isUsed 
-                      ? 'border-slate-800 opacity-40 grayscale cursor-not-allowed' 
-                      : 'border-slate-600 hover:border-yellow-500 hover:scale-[1.02] shadow-lg bg-slate-800'
-                    }
-                  `}
-                >
-                  <div className={`w-full ${aspectClass} bg-slate-950 relative`}>
-                     <img 
-                       src={item.img} 
-                       alt={item.name} 
-                       className="w-full h-full object-cover" 
-                       loading="lazy"
-                     />
-                     <div className="absolute bottom-0 w-full bg-black/70 p-2 text-center">
-                       <span className="text-sm font-bold text-white truncate block">
-                         {item.name}
-                       </span>
-                     </div>
-                  </div>
-                  
-                  {isUsed && (
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                      <span className="bg-red-600 text-white font-bold px-3 py-1 rounded text-sm border border-red-400">
-                        사용중
-                      </span>
+          {filteredData.length > 0 ? (
+            <div className={`grid ${gridClass} gap-4`}>
+              {filteredData.map((item) => {
+                const isUsed = usedIds.includes(item.id);
+                return (
+                  <button
+                    key={item.id}
+                    disabled={isUsed}
+                    onClick={() => onSelect(item)}
+                    className={`
+                      relative group flex flex-col items-center rounded-lg border-2 transition-all overflow-hidden
+                      ${isUsed 
+                        ? 'border-slate-800 opacity-40 grayscale cursor-not-allowed' 
+                        : 'border-slate-600 hover:border-yellow-500 hover:scale-[1.02] shadow-lg bg-slate-800'
+                      }
+                    `}
+                  >
+                    <div className={`w-full ${aspectClass} bg-slate-950 relative`}>
+                       <img 
+                         src={item.img} 
+                         alt={item.name} 
+                         className="w-full h-full object-cover" 
+                         loading="lazy"
+                       />
+                       <div className="absolute bottom-0 w-full bg-black/70 p-2 text-center">
+                         <span className="text-sm font-bold text-white truncate block">
+                           {item.name}
+                         </span>
+                       </div>
                     </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+                    
+                    {isUsed && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <span className="bg-red-600 text-white font-bold px-3 py-1 rounded text-sm border border-red-400">
+                          사용중
+                        </span>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center text-slate-500 py-10 flex flex-col items-center gap-2">
+              <Search size={48} className="opacity-20" />
+              <span>검색 결과가 없습니다.</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -140,7 +235,7 @@ const PartyEditPage = ({ parties, handleUpdateSlot, renameParty }) => {
     if (!party.slots[slotIndex].character) return alert("먼저 캐릭터를 배치해주세요!");
 
     if (party.slots[slotIndex].equipments[equipIndex]) {
-      if(window.confirm("명륜를 해제하시겠습니까?")) {
+      if(window.confirm("명륜을 해제하시겠습니까?")) {
         handleUpdateSlot(party.id, slotIndex, 'equipment', null, equipIndex);
       }
     } else {
@@ -253,7 +348,6 @@ const PartyEditPage = ({ parties, handleUpdateSlot, renameParty }) => {
                       ${slot.equipments[equipIdx] ? 'border-yellow-500' : 'bg-black/40 border-slate-500/50 hover:border-yellow-300'}
                     `}
                   >
-                    {/* [변경] 명륜이 없을 때 Settings 아이콘 표시 */}
                     {slot.equipments[equipIdx] ? (
                       <img src={slot.equipments[equipIdx].img} alt="명륜" className="w-full h-full object-cover" />
                     ) : (
