@@ -27,7 +27,6 @@ const ELEMENT_ICONS = {
   "Ultra": "/morimenz_party/images/ultra.png"
 };
 
-// [수정] 요청하신 순서대로 변경 (데미지형 -> 방어형 -> 보조형)
 const ROLE_ORDER = ["데미지형", "방어형", "보조형"];
 
 // --- [3] 통합 선택 모달 ---
@@ -142,20 +141,23 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
                   ? item.element.charAt(0).toUpperCase() + item.element.slice(1).toLowerCase() 
                   : "";
                 
+                // [수정] 오직 JSON에 있는 'keyword'만 사용합니다.
+                const displayStats = item.keyword;
+
                 return (
                   <button
                     key={item.id}
                     disabled={isUsed}
                     onClick={() => onSelect(item)}
                     className={`
-                      relative group flex flex-col items-center rounded-lg border-2 transition-all overflow-hidden
+                      relative group flex flex-col items-center rounded-lg border-2 transition-all overflow-visible
                       ${isUsed 
                         ? 'border-slate-800 opacity-40 grayscale cursor-not-allowed' 
                         : 'border-slate-600 hover:border-yellow-500 hover:scale-[1.02] shadow-lg bg-slate-800'
                       }
                     `}
                   >
-                    <div className={`w-full ${aspectClass} bg-slate-950 relative`}>
+                    <div className={`w-full ${aspectClass} bg-slate-950 relative overflow-hidden rounded-t-md`}>
                        <img 
                          src={item.img} 
                          alt={item.name} 
@@ -173,15 +175,31 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
                          </div>
                        )}
 
-                       <div className="absolute bottom-0 w-full bg-black/70 p-2 text-center">
+                       <div className="absolute bottom-0 w-full bg-black/70 p-2 text-center flex flex-col justify-center min-h-[2.5rem]">
                          <span className="text-sm font-bold text-white truncate block">
                            {item.name}
                          </span>
+                         {/* 키워드 표시 */}
+                         {type !== 'char' && displayStats && (
+                           <span className="text-[10px] md:text-xs text-yellow-400 font-bold truncate block mt-0.5">
+                             {displayStats}
+                           </span>
+                         )}
                        </div>
                     </div>
                     
+                    {/* 툴팁: 전체 상세 내용 */}
+                    {type !== 'char' && item.stats && (
+                      <div className="absolute bottom-[105%] left-1/2 transform -translate-x-1/2 w-64 bg-slate-900 border border-yellow-500 text-white text-xs p-3 rounded-md shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 text-left">
+                        <p className="font-bold text-yellow-400 mb-1 text-sm">{item.name}</p>
+                        <p className="leading-relaxed text-slate-300 break-keep">{item.stats}</p>
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-8 border-transparent border-t-slate-900"></div>
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-[9px] border-transparent border-t-yellow-500 -z-10"></div>
+                      </div>
+                    )}
+                    
                     {isUsed && (
-                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
                         <span className="bg-red-600 text-white font-bold px-3 py-1 rounded text-sm border border-red-400">
                           사용중
                         </span>
