@@ -141,7 +141,6 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
                   ? item.element.charAt(0).toUpperCase() + item.element.slice(1).toLowerCase() 
                   : "";
                 
-                // [수정] 오직 JSON에 있는 'keyword'만 사용합니다.
                 const displayStats = item.keyword;
 
                 return (
@@ -150,14 +149,14 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
                     disabled={isUsed}
                     onClick={() => onSelect(item)}
                     className={`
-                      relative group flex flex-col items-center rounded-lg border-2 transition-all overflow-visible
+                      relative group flex flex-col items-center rounded-lg border-2 transition-all overflow-hidden
                       ${isUsed 
                         ? 'border-slate-800 opacity-40 grayscale cursor-not-allowed' 
                         : 'border-slate-600 hover:border-yellow-500 hover:scale-[1.02] shadow-lg bg-slate-800'
                       }
                     `}
                   >
-                    <div className={`w-full ${aspectClass} bg-slate-950 relative overflow-hidden rounded-t-md`}>
+                    <div className={`w-full ${aspectClass} bg-slate-950 relative`}>
                        <img 
                          src={item.img} 
                          alt={item.name} 
@@ -175,11 +174,31 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
                          </div>
                        )}
 
+                       {/* [수정] 오버레이 툴팁 (카드 전체를 덮는 스타일) */}
+                       {type !== 'char' && item.stats && (
+                         <div 
+                           className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 backdrop-blur-[2px]"
+                           style={{ backgroundColor: 'rgba(15, 23, 42, 0.6)' }} // 요청하신 배경색
+                         >
+                           {/* 테두리와 내부 컨텐츠 (스크린샷 스타일 모방) */}
+                           <div className="w-full h-full border border-yellow-500/50 rounded flex flex-col items-center justify-center p-2">
+                             <p className="font-bold text-yellow-500 mb-2 text-sm drop-shadow-md">{item.name}</p>
+                             <p className="text-xs text-white leading-relaxed break-keep font-medium drop-shadow-sm">
+                               {item.stats}
+                             </p>
+                             {/* 하단 이름/광기 등 추가 정보도 여기에 포함 가능 */}
+                             <div className="mt-auto pt-2 text-[10px] text-slate-400">
+                               {item.name} <br/>
+                               <span className="text-yellow-600">광기</span>
+                             </div>
+                           </div>
+                         </div>
+                       )}
+
                        <div className="absolute bottom-0 w-full bg-black/70 p-2 text-center flex flex-col justify-center min-h-[2.5rem]">
                          <span className="text-sm font-bold text-white truncate block">
                            {item.name}
                          </span>
-                         {/* 키워드 표시 */}
                          {type !== 'char' && displayStats && (
                            <span className="text-[10px] md:text-xs text-yellow-400 font-bold truncate block mt-0.5">
                              {displayStats}
@@ -188,18 +207,8 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
                        </div>
                     </div>
                     
-                    {/* 툴팁: 전체 상세 내용 */}
-                    {type !== 'char' && item.stats && (
-                      <div className="absolute bottom-[105%] left-1/2 transform -translate-x-1/2 w-64 bg-slate-900 border border-yellow-500 text-white text-xs p-3 rounded-md shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 text-left">
-                        <p className="font-bold text-yellow-400 mb-1 text-sm">{item.name}</p>
-                        <p className="leading-relaxed text-slate-300 break-keep">{item.stats}</p>
-                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-8 border-transparent border-t-slate-900"></div>
-                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-[9px] border-transparent border-t-yellow-500 -z-10"></div>
-                      </div>
-                    )}
-                    
                     {isUsed && (
-                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-20">
                         <span className="bg-red-600 text-white font-bold px-3 py-1 rounded text-sm border border-red-400">
                           사용중
                         </span>
