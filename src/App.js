@@ -141,7 +141,7 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
                   ? item.element.charAt(0).toUpperCase() + item.element.slice(1).toLowerCase() 
                   : "";
                 
-                const displayStats = item.keyword;
+                const displayKeyword = item.keyword;
 
                 return (
                   <button
@@ -149,14 +149,14 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
                     disabled={isUsed}
                     onClick={() => onSelect(item)}
                     className={`
-                      relative group flex flex-col items-center rounded-lg border-2 transition-all overflow-hidden
+                      relative group flex flex-col items-center rounded-lg border-2 transition-all overflow-visible
                       ${isUsed 
                         ? 'border-slate-800 opacity-40 grayscale cursor-not-allowed' 
                         : 'border-slate-600 hover:border-yellow-500 hover:scale-[1.02] shadow-lg bg-slate-800'
                       }
                     `}
                   >
-                    <div className={`w-full ${aspectClass} bg-slate-950 relative`}>
+                    <div className={`w-full ${aspectClass} bg-slate-950 relative overflow-hidden rounded-t-md`}>
                        <img 
                          src={item.img} 
                          alt={item.name} 
@@ -174,34 +174,50 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
                          </div>
                        )}
 
-                       {/* [수정] 오버레이 툴팁 (카드 전체를 덮는 스타일) */}
-                       {type !== 'char' && item.stats && (
+                       {/* [수정] 오버레이 툴팁 (마우스 오버 시) */}
+                       {type !== 'char' && (
                          <div 
                            className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 backdrop-blur-[2px]"
-                           style={{ backgroundColor: 'rgba(15, 23, 42, 0.6)' }} // 요청하신 배경색
+                           style={{ backgroundColor: 'rgba(15, 23, 42, 0.7)' }} 
                          >
-                           {/* 테두리와 내부 컨텐츠 (스크린샷 스타일 모방) */}
+                           {/* 툴팁 내부 컨텐츠 */}
                            <div className="w-full h-full border border-yellow-500/50 rounded flex flex-col items-center justify-center p-2">
-                             <p className="font-bold text-yellow-500 mb-2 text-sm drop-shadow-md">{item.name}</p>
-                             <p className="text-xs text-white leading-relaxed break-keep font-medium drop-shadow-sm">
+                             {/* 1. 이름 */}
+                             <p className="font-bold text-yellow-500 mb-1 text-sm drop-shadow-md">{item.name}</p>
+                             
+                             {/* 2. 서브 옵션 (있으면 표시) */}
+                             {item.sub_stats && (
+                               <p className="text-sm text-white font-bold mb-2 drop-shadow-md">{item.sub_stats}</p>
+                             )}
+
+                             <div className="w-full h-[1px] bg-slate-500/50 mb-2"></div>
+                             
+                             {/* 3. 메인 옵션 (stats) */}
+                             <p className="text-xs text-white leading-relaxed break-keep overflow-y-auto scrollbar-hide max-h-full font-medium drop-shadow-sm text-left w-full">
                                {item.stats}
                              </p>
-                             {/* 하단 이름/광기 등 추가 정보도 여기에 포함 가능 */}
-                             <div className="mt-auto pt-2 text-[10px] text-slate-400">
-                               {item.name} <br/>
-                               <span className="text-yellow-600">광기</span>
-                             </div>
                            </div>
                          </div>
                        )}
 
-                       <div className="absolute bottom-0 w-full bg-black/70 p-2 text-center flex flex-col justify-center min-h-[2.5rem]">
+                       {/* [수정] 카드 하단 정보 (기본 상태) */}
+                       <div className="absolute bottom-0 w-full bg-black/70 p-2 text-center flex flex-col justify-center min-h-[3.5rem]">
+                         {/* 1. 이름 */}
                          <span className="text-sm font-bold text-white truncate block">
                            {item.name}
                          </span>
-                         {type !== 'char' && displayStats && (
+                         
+                         {/* 2. 서브 옵션 (회색, 작게) */}
+                         {type !== 'char' && item.sub_stats && (
+                           <span className="text-[10px] text-slate-400 truncate block">
+                             {item.sub_stats}
+                           </span>
+                         )}
+
+                         {/* 3. 키워드 (노란색) */}
+                         {type !== 'char' && displayKeyword && (
                            <span className="text-[10px] md:text-xs text-yellow-400 font-bold truncate block mt-0.5">
-                             {displayStats}
+                             {displayKeyword}
                            </span>
                          )}
                        </div>
