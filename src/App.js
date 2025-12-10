@@ -30,7 +30,7 @@ const ELEMENT_ICONS = {
 const ROLE_ORDER = ["데미지형", "방어형", "보조형"];
 
 // --- [3] 통합 선택 모달 ---
-const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type, activeElements = [] }) => {
+const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type, activeElements = [], selectedId }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedElement, setSelectedElement] = useState(null);
   const [selectedRole, setSelectedRole] = useState(null);
@@ -45,19 +45,20 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
 
   if (!isOpen) return null;
 
+  // 1. 기본 필터링 (검색어, 속성 제한 등)
   const filteredData = data.filter(item => {
     const matchName = item.name.toLowerCase().includes(searchTerm.toLowerCase());
     if (!matchName) return false;
     
     if (type !== 'char') return true;
 
-    // 2속성 제한 필터
+    // 2속성 제한 필터 (현재 장착중인 아이템은 예외)
     if (activeElements.length >= 2) {
       const charElement = item.element;
       const isAll = charElement.toLowerCase() === 'all';
       const isAllowed = activeElements.includes(charElement);
       
-      if (!isAll && !isAllowed) return false;
+      if (!isAll && !isAllowed && item.id !== selectedId) return false;
     }
 
     const charElement = item.element ? item.element.toLowerCase() : "";
@@ -71,6 +72,24 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
 
     return matchElement && matchRole;
   });
+
+  // [수정] 2. 순서 재배치 (현재 장착중인 아이템을 맨 앞으로 이동)
+  const sortedData = useMemo(() => {
+    if (!selectedId) return filteredData; // 장착된 게 없으면 그대로 리턴
+
+    const index = filteredData.findIndex(item => item.id === selectedId);
+    
+    // 필터링 결과에 현재 아이템이 없다면(검색어 등으로 인해) 그냥 그대로 리턴
+    if (index === -1) return filteredData;
+
+    // 배열 복사 후 순서 변경
+    const newArr = [...filteredData];
+    const [selectedItem] = newArr.splice(index, 1); // 기존 위치에서 제거
+    newArr.unshift(selectedItem); // 맨 앞에 추가
+    
+    return newArr;
+  }, [filteredData, selectedId]);
+
 
   const gridClass = type === 'char' ? 'grid-cols-4' : 'grid-cols-4 md:grid-cols-5 lg:grid-cols-6';
   const aspectClass = type === 'char' ? 'aspect-[5/9]' : 'aspect-[1/2]';
@@ -104,8 +123,9 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
                 <div className="flex gap-2 shrink-0">
                   {ELEMENT_ORDER.map((element) => {
                     let isDisabled = false;
+                    const currentItemElement = data.find(d => d.id === selectedId)?.element;
                     if (activeElements.length >= 2 && !activeElements.includes(element)) {
-                      isDisabled = true;
+                         if(currentItemElement !== element) isDisabled = true;
                     }
 
                     return (
@@ -152,10 +172,13 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
         </div>
 
         <div className="p-6 overflow-y-auto scrollbar-hide flex-1">
-          {filteredData.length > 0 ? (
+          {sortedData.length > 0 ? (
             <div className={`grid ${gridClass} gap-4`}>
-              {filteredData.map((item) => {
-                const isUsed = usedIds.includes(item.id);
+              {/* [수정] filteredData 대신 sortedData 사용 */}
+              {sortedData.map((item) => {
+                const isSelected = item.id === selectedId;
+                const isUsedOther = usedIds.includes(item.id) && !isSelected;
+
                 const elKey = item.element 
                   ? item.element.charAt(0).toUpperCase() + item.element.slice(1).toLowerCase() 
                   : "";
@@ -165,13 +188,15 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
                 return (
                   <button
                     key={item.id}
-                    disabled={isUsed}
-                    onClick={() => onSelect(item)}
+                    disabled={isUsedOther}
+                    onClick={() => onSelect(isSelected ? null : item)}
                     className={`
                       relative group flex flex-col items-center rounded-lg border-2 transition-all overflow-visible
-                      ${isUsed 
+                      ${isUsedOther
                         ? 'border-slate-800 opacity-40 grayscale cursor-not-allowed' 
-                        : 'border-slate-600 hover:border-yellow-500 hover:scale-[1.02] shadow-lg bg-slate-800'
+                        : isSelected 
+                          ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)] scale-[1.02]' 
+                          : 'border-slate-600 hover:border-yellow-500 hover:scale-[1.02] shadow-lg bg-slate-800'
                       }
                     `}
                   >
@@ -228,7 +253,13 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
                        </div>
                     </div>
                     
-                    {isUsed && (
+                    {isSelected ? (
+                      <div className="absolute inset-0 bg-yellow-500/20 flex items-center justify-center z-20">
+                        <span className="bg-yellow-500 text-slate-900 font-bold px-3 py-1 rounded text-sm border-2 border-yellow-400 shadow-lg animate-pulse">
+                          장착중 (해제)
+                        </span>
+                      </div>
+                    ) : isUsedOther && (
                       <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-20">
                         <span className="bg-red-600 text-white font-bold px-3 py-1 rounded text-sm border border-red-400">
                           사용중
@@ -290,6 +321,16 @@ const PartyEditPage = ({ parties, handleUpdateSlot, renameParty, resetParty }) =
   const allUsedCharIds = parties.flatMap(p => p.slots.filter(s => s.character).map(s => s.character.id));
   const allUsedEquipIds = parties.flatMap(p => p.slots.flatMap(s => s.equipments.filter(e => e).map(e => e.id)));
 
+  const currentSelectedId = useMemo(() => {
+    if (!party || !modalState.isOpen) return null;
+    const slot = party.slots[modalState.slotIndex];
+    if (modalState.type === 'char') {
+      return slot.character?.id;
+    } else {
+      return slot.equipments[modalState.equipIndex]?.id;
+    }
+  }, [party, modalState]);
+
   const getActiveElements = useMemo(() => {
     if (!party) return [];
     
@@ -307,15 +348,12 @@ const PartyEditPage = ({ parties, handleUpdateSlot, renameParty, resetParty }) =
   }, [party, modalState]);
 
   const onCharClick = (slotIndex) => {
-    // [수정] 경고창 없이 바로 선택창 오픈
     setModalState({ isOpen: true, type: 'char', slotIndex, equipIndex: null });
   };
 
   const onEquipClick = (e, slotIndex, equipIndex) => {
     e.stopPropagation();
     if (!party.slots[slotIndex].character) return alert("먼저 캐릭터를 배치해주세요!");
-
-    // [수정] 경고창 없이 바로 선택창 오픈
     setModalState({ isOpen: true, type: 'equip', slotIndex, equipIndex });
   };
 
@@ -490,6 +528,7 @@ const PartyEditPage = ({ parties, handleUpdateSlot, renameParty, resetParty }) =
         usedIds={modalState.type === 'char' ? allUsedCharIds : allUsedEquipIds}
         type={modalState.type}
         activeElements={getActiveElements}
+        selectedId={currentSelectedId}
       />
     </div>
   );
