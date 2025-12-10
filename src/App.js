@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
 import { User, X, Home, Edit3, Settings, Search, RotateCcw } from 'lucide-react';
 
@@ -30,7 +30,7 @@ const ELEMENT_ICONS = {
 const ROLE_ORDER = ["데미지형", "방어형", "보조형"];
 
 // --- [3] 통합 선택 모달 ---
-const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type }) => {
+const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type, activeElements = [] }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedElement, setSelectedElement] = useState(null);
   const [selectedRole, setSelectedRole] = useState(null);
@@ -47,8 +47,18 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
 
   const filteredData = data.filter(item => {
     const matchName = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!matchName) return false;
     
-    if (type !== 'char') return matchName;
+    if (type !== 'char') return true;
+
+    // 2속성 제한 필터
+    if (activeElements.length >= 2) {
+      const charElement = item.element;
+      const isAll = charElement.toLowerCase() === 'all';
+      const isAllowed = activeElements.includes(charElement);
+      
+      if (!isAll && !isAllowed) return false;
+    }
 
     const charElement = item.element ? item.element.toLowerCase() : "";
     const isAllElement = charElement === "all";
@@ -59,7 +69,7 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
 
     const matchRole = !selectedRole || item.role === selectedRole;
 
-    return matchName && matchElement && matchRole;
+    return matchElement && matchRole;
   });
 
   const gridClass = type === 'char' ? 'grid-cols-4' : 'grid-cols-4 md:grid-cols-5 lg:grid-cols-6';
@@ -92,21 +102,30 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
             {type === 'char' && (
               <div className="flex items-center gap-4 overflow-x-auto scrollbar-hide pb-1 w-full md:w-auto">
                 <div className="flex gap-2 shrink-0">
-                  {ELEMENT_ORDER.map((element) => (
-                    <button
-                      key={element}
-                      onClick={() => setSelectedElement(prev => prev === element ? null : element)}
-                      className={`
-                        w-10 h-10 rounded-full border-2 overflow-hidden transition-all p-1 bg-slate-800
-                        ${selectedElement === element 
-                          ? 'border-yellow-500 bg-yellow-900/30 shadow-[0_0_10px_rgba(234,179,8,0.8)] scale-110' 
-                          : 'border-slate-600 hover:border-slate-400 opacity-60 hover:opacity-100'}
-                      `}
-                      title={element}
-                    >
-                      <img src={ELEMENT_ICONS[element]} alt={element} className="w-full h-full object-contain" />
-                    </button>
-                  ))}
+                  {ELEMENT_ORDER.map((element) => {
+                    let isDisabled = false;
+                    if (activeElements.length >= 2 && !activeElements.includes(element)) {
+                      isDisabled = true;
+                    }
+
+                    return (
+                      <button
+                        key={element}
+                        disabled={isDisabled}
+                        onClick={() => setSelectedElement(prev => prev === element ? null : element)}
+                        className={`
+                          w-10 h-10 rounded-full border-2 overflow-hidden transition-all p-1 bg-slate-800
+                          ${isDisabled ? 'opacity-20 cursor-not-allowed grayscale' : ''}
+                          ${!isDisabled && selectedElement === element 
+                            ? 'border-yellow-500 bg-yellow-900/30 shadow-[0_0_10px_rgba(234,179,8,0.8)] scale-110' 
+                            : !isDisabled && 'border-slate-600 hover:border-slate-400 opacity-60 hover:opacity-100'}
+                        `}
+                        title={element}
+                      >
+                        <img src={ELEMENT_ICONS[element]} alt={element} className="w-full h-full object-contain" />
+                      </button>
+                    );
+                  })}
                 </div>
 
                 <div className="w-[1px] h-8 bg-slate-700 mx-1 shrink-0"></div>
@@ -174,25 +193,17 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
                          </div>
                        )}
 
-                       {/* [수정] 오버레이 툴팁 (마우스 오버 시) */}
                        {type !== 'char' && (
                          <div 
                            className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 backdrop-blur-[2px]"
                            style={{ backgroundColor: 'rgba(15, 23, 42, 0.7)' }} 
                          >
-                           {/* 툴팁 내부 컨텐츠 */}
                            <div className="w-full h-full border border-yellow-500/50 rounded flex flex-col items-center justify-center p-2">
-                             {/* 1. 이름 */}
                              <p className="font-bold text-yellow-500 mb-1 text-sm drop-shadow-md">{item.name}</p>
-                             
-                             {/* 2. 서브 옵션 (있으면 표시) */}
                              {item.sub_stats && (
                                <p className="text-sm text-white font-bold mb-2 drop-shadow-md">{item.sub_stats}</p>
                              )}
-
                              <div className="w-full h-[1px] bg-slate-500/50 mb-2"></div>
-                             
-                             {/* 3. 메인 옵션 (stats) */}
                              <p className="text-xs text-white leading-relaxed break-keep overflow-y-auto scrollbar-hide max-h-full font-medium drop-shadow-sm text-left w-full">
                                {item.stats}
                              </p>
@@ -200,21 +211,15 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type 
                          </div>
                        )}
 
-                       {/* [수정] 카드 하단 정보 (기본 상태) */}
                        <div className="absolute bottom-0 w-full bg-black/70 p-2 text-center flex flex-col justify-center min-h-[3.5rem]">
-                         {/* 1. 이름 */}
                          <span className="text-sm font-bold text-white truncate block">
                            {item.name}
                          </span>
-                         
-                         {/* 2. 서브 옵션 (회색, 작게) */}
                          {type !== 'char' && item.sub_stats && (
                            <span className="text-[10px] text-slate-400 truncate block">
                              {item.sub_stats}
                            </span>
                          )}
-
-                         {/* 3. 키워드 (노란색) */}
                          {type !== 'char' && displayKeyword && (
                            <span className="text-[10px] md:text-xs text-yellow-400 font-bold truncate block mt-0.5">
                              {displayKeyword}
@@ -285,27 +290,33 @@ const PartyEditPage = ({ parties, handleUpdateSlot, renameParty, resetParty }) =
   const allUsedCharIds = parties.flatMap(p => p.slots.filter(s => s.character).map(s => s.character.id));
   const allUsedEquipIds = parties.flatMap(p => p.slots.flatMap(s => s.equipments.filter(e => e).map(e => e.id)));
 
+  const getActiveElements = useMemo(() => {
+    if (!party) return [];
+    
+    const currentSlotIndex = modalState.slotIndex;
+
+    const elements = new Set();
+    party.slots.forEach((slot, idx) => {
+      if (!slot.character) return;
+      if (modalState.isOpen && modalState.type === 'char' && idx === currentSlotIndex) return;
+      if (slot.character.element.toLowerCase() === 'all') return;
+
+      elements.add(slot.character.element);
+    });
+    return Array.from(elements);
+  }, [party, modalState]);
+
   const onCharClick = (slotIndex) => {
-    if (party.slots[slotIndex].character) {
-      if(window.confirm("캐릭터를 파티에서 제외하시겠습니까?")) {
-        handleUpdateSlot(party.id, slotIndex, 'character', null);
-      }
-    } else {
-      setModalState({ isOpen: true, type: 'char', slotIndex, equipIndex: null });
-    }
+    // [수정] 경고창 없이 바로 선택창 오픈
+    setModalState({ isOpen: true, type: 'char', slotIndex, equipIndex: null });
   };
 
   const onEquipClick = (e, slotIndex, equipIndex) => {
     e.stopPropagation();
     if (!party.slots[slotIndex].character) return alert("먼저 캐릭터를 배치해주세요!");
 
-    if (party.slots[slotIndex].equipments[equipIndex]) {
-      if(window.confirm("명륜을 해제하시겠습니까?")) {
-        handleUpdateSlot(party.id, slotIndex, 'equipment', null, equipIndex);
-      }
-    } else {
-      setModalState({ isOpen: true, type: 'equip', slotIndex, equipIndex });
-    }
+    // [수정] 경고창 없이 바로 선택창 오픈
+    setModalState({ isOpen: true, type: 'equip', slotIndex, equipIndex });
   };
 
   const handleSelect = (data) => {
@@ -478,6 +489,7 @@ const PartyEditPage = ({ parties, handleUpdateSlot, renameParty, resetParty }) =
         onSelect={handleSelect}
         usedIds={modalState.type === 'char' ? allUsedCharIds : allUsedEquipIds}
         type={modalState.type}
+        activeElements={getActiveElements}
       />
     </div>
   );
