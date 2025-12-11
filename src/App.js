@@ -7,7 +7,8 @@ import characterData from './data/character.json';
 import equipmentData from './data/myeongryun.json';
 
 // --- [2] 초기 파티 데이터 설정 ---
-const INITIAL_DATA = Array.from({ length: 5 }, (_, i) => ({
+// [수정] 파티 개수 5 -> 10으로 변경
+const INITIAL_DATA = Array.from({ length: 10 }, (_, i) => ({
   id: i + 1,
   name: `파티 ${i + 1}`,
   slots: Array.from({ length: 4 }, (_, j) => ({
@@ -17,7 +18,8 @@ const INITIAL_DATA = Array.from({ length: 5 }, (_, i) => ({
   }))
 }));
 
-const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V"];
+// [수정] 로마 숫자 10(X)까지 확장
+const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
 
 const ELEMENT_ORDER = ["Chaos", "Aequor", "Caro", "Ultra"];
 const ELEMENT_ICONS = {
