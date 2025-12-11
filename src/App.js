@@ -270,7 +270,7 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
                          >
                            <div className="w-full h-full border border-yellow-500/50 rounded flex flex-col items-center justify-center p-2">
                              <p className="font-bold text-yellow-500 mb-1 text-sm drop-shadow-md">{item.name}</p>
-                             {item.sub_stats && item.sub_stats !== "몰루" && (
+                             {item.sub_stats && (
                                <p className="text-sm text-white font-bold mb-2 drop-shadow-md">{item.sub_stats}</p>
                              )}
                              <div className="w-full h-[1px] bg-slate-500/50 mb-2"></div>
