@@ -7,7 +7,7 @@ import characterData from './data/character.json';
 import equipmentData from './data/myeongryun.json';
 
 // --- [2] 초기 파티 데이터 설정 ---
-// [수정] 파티 개수 5 -> 10으로 변경
+// (처음 접속하는 사람을 위한 기본값)
 const INITIAL_DATA = Array.from({ length: 10 }, (_, i) => ({
   id: i + 1,
   name: `파티 ${i + 1}`,
@@ -18,7 +18,6 @@ const INITIAL_DATA = Array.from({ length: 10 }, (_, i) => ({
   }))
 }));
 
-// [수정] 로마 숫자 10(X)까지 확장
 const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
 
 const ELEMENT_ORDER = ["Chaos", "Aequor", "Caro", "Ultra"];
@@ -47,14 +46,12 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
     }
   }, [isOpen]);
 
-  // [수정] 명륜 서브옵션 종류 자동 추출 ("몰루" 제외)
   const subStatOptions = useMemo(() => {
     if (type === 'char') return [];
     const stats = new Set();
     data.forEach(item => {
       if (item.sub_stats) {
         const name = item.sub_stats.trim();
-        // "몰루"가 아니고 빈 값이 아닐 때만 필터 버튼 생성
         if (name && name !== "몰루") {
           stats.add(name);
         }
@@ -64,14 +61,12 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
   }, [data, type]);
 
   const filteredData = data.filter(item => {
-    // 1. 검색
     const lowerSearch = searchTerm.toLowerCase();
     const matchName = item.name.toLowerCase().includes(lowerSearch);
     const matchStats = type !== 'char' && item.stats && item.stats.toLowerCase().includes(lowerSearch);
     
     if (!matchName && !matchStats) return false;
     
-    // 2. 캐릭터 필터
     if (type === 'char') {
       if (activeElements.length >= 2) {
         const charElement = item.element;
@@ -90,9 +85,7 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
       const matchRole = !selectedRole || item.role === selectedRole;
 
       return matchElement && matchRole;
-    } 
-    // 3. 명륜 필터 (서브옵션)
-    else {
+    } else {
       const matchSubStat = !selectedSubStat || (item.sub_stats && item.sub_stats === selectedSubStat);
       return matchSubStat;
     }
@@ -142,7 +135,6 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
             </div>
 
             <div className="flex items-center gap-4 overflow-x-auto scrollbar-hide pb-1 w-full md:w-auto">
-              
               {type === 'char' && (
                 <>
                   <div className="flex gap-2 shrink-0">
@@ -172,9 +164,7 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
                       );
                     })}
                   </div>
-
                   <div className="w-[1px] h-8 bg-slate-700 mx-1 shrink-0"></div>
-
                   <div className="flex gap-2 shrink-0">
                     {ROLE_ORDER.map(role => (
                       <button
@@ -212,7 +202,6 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
                   ))}
                 </div>
               )}
-
             </div>
           </div>
         </div>
@@ -223,11 +212,7 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
               {sortedData.map((item) => {
                 const isSelected = item.id === selectedId;
                 const isUsedOther = usedIds.includes(item.id) && !isSelected;
-
-                const elKey = item.element 
-                  ? item.element.charAt(0).toUpperCase() + item.element.slice(1).toLowerCase() 
-                  : "";
-                
+                const elKey = item.element ? item.element.charAt(0).toUpperCase() + item.element.slice(1).toLowerCase() : "";
                 const displayKeyword = item.keyword;
 
                 return (
@@ -246,20 +231,11 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
                     `}
                   >
                     <div className={`w-full ${aspectClass} bg-slate-950 relative overflow-hidden rounded-t-md`}>
-                       <img 
-                         src={item.img} 
-                         alt={item.name} 
-                         className="w-full h-full object-cover object-top" 
-                         loading="lazy"
-                       />
+                       <img src={item.img} alt={item.name} className="w-full h-full object-cover object-top" loading="lazy" />
                        
                        {type === 'char' && ELEMENT_ICONS[elKey] && (
                          <div className="absolute top-1 right-1 w-6 h-6 md:w-7 md:h-7 bg-black/40 rounded-full p-0.5 backdrop-blur-[1px]">
-                           <img 
-                             src={ELEMENT_ICONS[elKey]} 
-                             alt={item.element}
-                             className="w-full h-full object-contain drop-shadow-md"
-                           />
+                           <img src={ELEMENT_ICONS[elKey]} alt={item.element} className="w-full h-full object-contain drop-shadow-md" />
                          </div>
                        )}
 
@@ -282,18 +258,12 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
                        )}
 
                        <div className="absolute bottom-0 w-full bg-black/70 p-2 text-center flex flex-col justify-center min-h-[3.5rem]">
-                         <span className="text-sm font-bold text-white truncate block">
-                           {item.name}
-                         </span>
+                         <span className="text-sm font-bold text-white truncate block">{item.name}</span>
                          {type !== 'char' && item.sub_stats && item.sub_stats !== "몰루" && (
-                           <span className="text-[10px] text-slate-400 truncate block">
-                             {item.sub_stats}
-                           </span>
+                           <span className="text-[10px] text-slate-400 truncate block">{item.sub_stats}</span>
                          )}
                          {type !== 'char' && displayKeyword && displayKeyword !== "몰루" && (
-                           <span className="text-[10px] md:text-xs text-yellow-400 font-bold truncate block mt-0.5">
-                             {displayKeyword}
-                           </span>
+                           <span className="text-[10px] md:text-xs text-yellow-400 font-bold truncate block mt-0.5">{displayKeyword}</span>
                          )}
                        </div>
                     </div>
@@ -306,9 +276,7 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
                       </div>
                     ) : isUsedOther && (
                       <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-20">
-                        <span className="bg-red-600 text-white font-bold px-3 py-1 rounded text-sm border border-red-400">
-                          사용중
-                        </span>
+                        <span className="bg-red-600 text-white font-bold px-3 py-1 rounded text-sm border border-red-400">사용중</span>
                       </div>
                     )}
                   </button>
@@ -378,15 +346,12 @@ const PartyEditPage = ({ parties, handleUpdateSlot, renameParty, resetParty }) =
 
   const getActiveElements = useMemo(() => {
     if (!party) return [];
-    
     const currentSlotIndex = modalState.slotIndex;
-
     const elements = new Set();
     party.slots.forEach((slot, idx) => {
       if (!slot.character) return;
       if (modalState.isOpen && modalState.type === 'char' && idx === currentSlotIndex) return;
       if (slot.character.element.toLowerCase() === 'all') return;
-
       elements.add(slot.character.element);
     });
     return Array.from(elements);
@@ -584,7 +549,21 @@ function App() {
   const [parties, setParties] = useState(() => {
     const savedData = localStorage.getItem('morimenz_party_data');
     if (savedData) {
-      return JSON.parse(savedData);
+      const parsedData = JSON.parse(savedData);
+      // [수정] 데이터 마이그레이션: 5개면 나머지 5개 추가
+      if (parsedData.length < 10) {
+        const more = Array.from({ length: 10 - parsedData.length }, (_, i) => ({
+          id: parsedData.length + i + 1,
+          name: `파티 ${parsedData.length + i + 1}`,
+          slots: Array.from({ length: 4 }, (_, j) => ({
+            id: j,
+            character: null, 
+            equipments: [null, null] 
+          }))
+        }));
+        return [...parsedData, ...more];
+      }
+      return parsedData;
     } else {
       return INITIAL_DATA;
     }
