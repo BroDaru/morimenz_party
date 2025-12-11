@@ -43,16 +43,14 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
-  // 1. 기본 필터링 (검색어, 속성 제한 등)
+  // [수정] 1. filteredData 계산 로직을 위로 올렸습니다.
   const filteredData = data.filter(item => {
     const matchName = item.name.toLowerCase().includes(searchTerm.toLowerCase());
     if (!matchName) return false;
     
     if (type !== 'char') return true;
 
-    // 2속성 제한 필터 (현재 장착중인 아이템은 예외)
+    // 2속성 제한 필터
     if (activeElements.length >= 2) {
       const charElement = item.element;
       const isAll = charElement.toLowerCase() === 'all';
@@ -73,23 +71,23 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
     return matchElement && matchRole;
   });
 
-  // [수정] 2. 순서 재배치 (현재 장착중인 아이템을 맨 앞으로 이동)
+  // [수정] 2. useMemo(Hook)도 return null보다 위로 올렸습니다.
   const sortedData = useMemo(() => {
-    if (!selectedId) return filteredData; // 장착된 게 없으면 그대로 리턴
+    if (!selectedId) return filteredData;
 
     const index = filteredData.findIndex(item => item.id === selectedId);
     
-    // 필터링 결과에 현재 아이템이 없다면(검색어 등으로 인해) 그냥 그대로 리턴
     if (index === -1) return filteredData;
 
-    // 배열 복사 후 순서 변경
     const newArr = [...filteredData];
-    const [selectedItem] = newArr.splice(index, 1); // 기존 위치에서 제거
-    newArr.unshift(selectedItem); // 맨 앞에 추가
+    const [selectedItem] = newArr.splice(index, 1);
+    newArr.unshift(selectedItem);
     
     return newArr;
   }, [filteredData, selectedId]);
 
+  // [수정] 3. 모든 Hook 선언이 끝난 후에 조건부 return을 합니다.
+  if (!isOpen) return null;
 
   const gridClass = type === 'char' ? 'grid-cols-4' : 'grid-cols-4 md:grid-cols-5 lg:grid-cols-6';
   const aspectClass = type === 'char' ? 'aspect-[5/9]' : 'aspect-[1/2]';
@@ -174,7 +172,6 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
         <div className="p-6 overflow-y-auto scrollbar-hide flex-1">
           {sortedData.length > 0 ? (
             <div className={`grid ${gridClass} gap-4`}>
-              {/* [수정] filteredData 대신 sortedData 사용 */}
               {sortedData.map((item) => {
                 const isSelected = item.id === selectedId;
                 const isUsedOther = usedIds.includes(item.id) && !isSelected;
