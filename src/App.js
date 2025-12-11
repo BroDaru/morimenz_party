@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-// BrowserRouter 대신 HashRouter 사용
 import { HashRouter as Router, Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
 import { User, X, Home, Edit3, Settings, Search, RotateCcw } from 'lucide-react';
 
@@ -35,39 +34,66 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedElement, setSelectedElement] = useState(null);
   const [selectedRole, setSelectedRole] = useState(null);
+  const [selectedSubStat, setSelectedSubStat] = useState(null);
 
   useEffect(() => {
     if (isOpen) {
       setSearchTerm("");
       setSelectedElement(null);
       setSelectedRole(null);
+      setSelectedSubStat(null);
     }
   }, [isOpen]);
 
+  // [수정] 명륜 서브옵션 종류 자동 추출 ("몰루" 제외)
+  const subStatOptions = useMemo(() => {
+    if (type === 'char') return [];
+    const stats = new Set();
+    data.forEach(item => {
+      if (item.sub_stats) {
+        const name = item.sub_stats.trim();
+        // "몰루"가 아니고 빈 값이 아닐 때만 필터 버튼 생성
+        if (name && name !== "몰루") {
+          stats.add(name);
+        }
+      }
+    });
+    return Array.from(stats).sort();
+  }, [data, type]);
+
   const filteredData = data.filter(item => {
-    const matchName = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-    if (!matchName) return false;
+    // 1. 검색
+    const lowerSearch = searchTerm.toLowerCase();
+    const matchName = item.name.toLowerCase().includes(lowerSearch);
+    const matchStats = type !== 'char' && item.stats && item.stats.toLowerCase().includes(lowerSearch);
     
-    if (type !== 'char') return true;
+    if (!matchName && !matchStats) return false;
+    
+    // 2. 캐릭터 필터
+    if (type === 'char') {
+      if (activeElements.length >= 2) {
+        const charElement = item.element;
+        const isAll = charElement.toLowerCase() === 'all';
+        const isAllowed = activeElements.includes(charElement);
+        if (!isAll && !isAllowed && item.id !== selectedId) return false;
+      }
 
-    if (activeElements.length >= 2) {
-      const charElement = item.element;
-      const isAll = charElement.toLowerCase() === 'all';
-      const isAllowed = activeElements.includes(charElement);
+      const charElement = item.element ? item.element.toLowerCase() : "";
+      const isAllElement = charElement === "all";
       
-      if (!isAll && !isAllowed && item.id !== selectedId) return false;
+      const matchElement = !selectedElement || 
+                           isAllElement || 
+                           charElement === selectedElement.toLowerCase();
+
+      const matchRole = !selectedRole || item.role === selectedRole;
+
+      return matchElement && matchRole;
+    } 
+    // 3. 명륜 필터 (서브옵션)
+    else {
+      const matchSubStat = !selectedSubStat || (item.sub_stats && item.sub_stats === selectedSubStat);
+      return matchSubStat;
     }
-
-    const charElement = item.element ? item.element.toLowerCase() : "";
-    const isAllElement = charElement === "all";
-    
-    const matchElement = !selectedElement || 
-                         isAllElement || 
-                         charElement === selectedElement.toLowerCase();
-
-    const matchRole = !selectedRole || item.role === selectedRole;
-
-    return matchElement && matchRole;
   });
 
   const sortedData = useMemo(() => {
@@ -106,63 +132,86 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
               <input 
                 type="text" 
-                placeholder={`${title === '캐릭터 선택' ? '캐릭터' : '명륜'} 이름 검색...`} 
+                placeholder={`${title === '캐릭터 선택' ? '캐릭터' : '명륜'} 이름/옵션 검색...`} 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-slate-800 border border-slate-600 text-white pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:border-yellow-500 transition-colors"
               />
             </div>
 
-            {type === 'char' && (
-              <div className="flex items-center gap-4 overflow-x-auto scrollbar-hide pb-1 w-full md:w-auto">
-                <div className="flex gap-2 shrink-0">
-                  {ELEMENT_ORDER.map((element) => {
-                    let isDisabled = false;
-                    const currentItemElement = data.find(d => d.id === selectedId)?.element;
-                    if (activeElements.length >= 2 && !activeElements.includes(element)) {
-                         if(currentItemElement !== element) isDisabled = true;
-                    }
+            <div className="flex items-center gap-4 overflow-x-auto scrollbar-hide pb-1 w-full md:w-auto">
+              
+              {type === 'char' && (
+                <>
+                  <div className="flex gap-2 shrink-0">
+                    {ELEMENT_ORDER.map((element) => {
+                      let isDisabled = false;
+                      const currentItemElement = data.find(d => d.id === selectedId)?.element;
+                      if (activeElements.length >= 2 && !activeElements.includes(element)) {
+                           if(currentItemElement !== element) isDisabled = true;
+                      }
 
-                    return (
+                      return (
+                        <button
+                          key={element}
+                          disabled={isDisabled}
+                          onClick={() => setSelectedElement(prev => prev === element ? null : element)}
+                          className={`
+                            w-10 h-10 rounded-full border-2 overflow-hidden transition-all p-1 bg-slate-800
+                            ${isDisabled ? 'opacity-20 cursor-not-allowed grayscale' : ''}
+                            ${!isDisabled && selectedElement === element 
+                              ? 'border-yellow-500 bg-yellow-900/30 shadow-[0_0_10px_rgba(234,179,8,0.8)] scale-110' 
+                              : !isDisabled && 'border-slate-600 hover:border-slate-400 opacity-60 hover:opacity-100'}
+                          `}
+                          title={element}
+                        >
+                          <img src={ELEMENT_ICONS[element]} alt={element} className="w-full h-full object-contain" />
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="w-[1px] h-8 bg-slate-700 mx-1 shrink-0"></div>
+
+                  <div className="flex gap-2 shrink-0">
+                    {ROLE_ORDER.map(role => (
                       <button
-                        key={element}
-                        disabled={isDisabled}
-                        onClick={() => setSelectedElement(prev => prev === element ? null : element)}
+                        key={role}
+                        onClick={() => setSelectedRole(prev => prev === role ? null : role)}
                         className={`
-                          w-10 h-10 rounded-full border-2 overflow-hidden transition-all p-1 bg-slate-800
-                          ${isDisabled ? 'opacity-20 cursor-not-allowed grayscale' : ''}
-                          ${!isDisabled && selectedElement === element 
-                            ? 'border-yellow-500 bg-yellow-900/30 shadow-[0_0_10px_rgba(234,179,8,0.8)] scale-110' 
-                            : !isDisabled && 'border-slate-600 hover:border-slate-400 opacity-60 hover:opacity-100'}
+                          px-3 py-1.5 rounded-full text-xs font-bold border transition-all whitespace-nowrap
+                          ${selectedRole === role
+                            ? 'bg-slate-800 text-yellow-400 border-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.4)]'
+                            : 'bg-slate-800 text-slate-400 border-slate-600 hover:border-slate-400 hover:text-white'}
                         `}
-                        title={element}
                       >
-                        <img src={ELEMENT_ICONS[element]} alt={element} className="w-full h-full object-contain" />
+                        {role}
                       </button>
-                    );
-                  })}
-                </div>
+                    ))}
+                  </div>
+                </>
+              )}
 
-                <div className="w-[1px] h-8 bg-slate-700 mx-1 shrink-0"></div>
-
+              {type !== 'char' && subStatOptions.length > 0 && (
                 <div className="flex gap-2 shrink-0">
-                  {ROLE_ORDER.map(role => (
+                  {subStatOptions.map(stat => (
                     <button
-                      key={role}
-                      onClick={() => setSelectedRole(prev => prev === role ? null : role)}
+                      key={stat}
+                      onClick={() => setSelectedSubStat(prev => prev === stat ? null : stat)}
                       className={`
                         px-3 py-1.5 rounded-full text-xs font-bold border transition-all whitespace-nowrap
-                        ${selectedRole === role
+                        ${selectedSubStat === stat
                           ? 'bg-slate-800 text-yellow-400 border-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.4)]'
                           : 'bg-slate-800 text-slate-400 border-slate-600 hover:border-slate-400 hover:text-white'}
                       `}
                     >
-                      {role}
+                      {stat}
                     </button>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
+
+            </div>
           </div>
         </div>
 
@@ -170,9 +219,8 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
           {sortedData.length > 0 ? (
             <div className={`grid ${gridClass} gap-4`}>
               {sortedData.map((item) => {
-                const isUsed = usedIds.includes(item.id);
                 const isSelected = item.id === selectedId;
-                const isUsedOther = isUsed && !isSelected;
+                const isUsedOther = usedIds.includes(item.id) && !isSelected;
 
                 const elKey = item.element 
                   ? item.element.charAt(0).toUpperCase() + item.element.slice(1).toLowerCase() 
@@ -220,7 +268,7 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
                          >
                            <div className="w-full h-full border border-yellow-500/50 rounded flex flex-col items-center justify-center p-2">
                              <p className="font-bold text-yellow-500 mb-1 text-sm drop-shadow-md">{item.name}</p>
-                             {item.sub_stats && (
+                             {item.sub_stats && item.sub_stats !== "몰루" && (
                                <p className="text-sm text-white font-bold mb-2 drop-shadow-md">{item.sub_stats}</p>
                              )}
                              <div className="w-full h-[1px] bg-slate-500/50 mb-2"></div>
@@ -235,12 +283,12 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
                          <span className="text-sm font-bold text-white truncate block">
                            {item.name}
                          </span>
-                         {type !== 'char' && item.sub_stats && (
+                         {type !== 'char' && item.sub_stats && item.sub_stats !== "몰루" && (
                            <span className="text-[10px] text-slate-400 truncate block">
                              {item.sub_stats}
                            </span>
                          )}
-                         {type !== 'char' && displayKeyword && (
+                         {type !== 'char' && displayKeyword && displayKeyword !== "몰루" && (
                            <span className="text-[10px] md:text-xs text-yellow-400 font-bold truncate block mt-0.5">
                              {displayKeyword}
                            </span>
