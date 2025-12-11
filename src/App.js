@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
+// [수정] BrowserRouter 대신 HashRouter 사용
+import { HashRouter as Router, Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
 import { User, X, Home, Edit3, Settings, Search, RotateCcw } from 'lucide-react';
 
 // --- [1] JSON 데이터 임포트 ---
@@ -43,7 +44,6 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
     }
   }, [isOpen]);
 
-  // [수정] 1. filteredData 계산 로직을 위로 올렸습니다.
   const filteredData = data.filter(item => {
     const matchName = item.name.toLowerCase().includes(searchTerm.toLowerCase());
     if (!matchName) return false;
@@ -71,7 +71,6 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
     return matchElement && matchRole;
   });
 
-  // [수정] 2. useMemo(Hook)도 return null보다 위로 올렸습니다.
   const sortedData = useMemo(() => {
     if (!selectedId) return filteredData;
 
@@ -86,7 +85,6 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
     return newArr;
   }, [filteredData, selectedId]);
 
-  // [수정] 3. 모든 Hook 선언이 끝난 후에 조건부 return을 합니다.
   if (!isOpen) return null;
 
   const gridClass = type === 'char' ? 'grid-cols-4' : 'grid-cols-4 md:grid-cols-5 lg:grid-cols-6';
