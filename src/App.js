@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-// [수정] BrowserRouter 대신 HashRouter 사용
+// BrowserRouter 대신 HashRouter 사용
 import { HashRouter as Router, Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
 import { User, X, Home, Edit3, Settings, Search, RotateCcw } from 'lucide-react';
 
@@ -50,7 +50,6 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
     
     if (type !== 'char') return true;
 
-    // 2속성 제한 필터
     if (activeElements.length >= 2) {
       const charElement = item.element;
       const isAll = charElement.toLowerCase() === 'all';
@@ -171,8 +170,9 @@ const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type,
           {sortedData.length > 0 ? (
             <div className={`grid ${gridClass} gap-4`}>
               {sortedData.map((item) => {
+                const isUsed = usedIds.includes(item.id);
                 const isSelected = item.id === selectedId;
-                const isUsedOther = usedIds.includes(item.id) && !isSelected;
+                const isUsedOther = isUsed && !isSelected;
 
                 const elKey = item.element 
                   ? item.element.charAt(0).toUpperCase() + item.element.slice(1).toLowerCase() 
@@ -618,7 +618,7 @@ function App() {
   };
 
   return (
-    <Router basename="/morimenz_party">
+    <Router>
       <Routes>
         <Route path="/" element={<PartyListPage parties={parties} />} />
         <Route path="/party/:id" element={<PartyEditPage parties={parties} handleUpdateSlot={handleUpdateSlot} renameParty={renameParty} resetParty={resetParty} />} />
