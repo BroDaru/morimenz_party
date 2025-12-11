@@ -1,10 +1,10 @@
 {
   "files": {
-    "main.js": "/morimenz_party/static/js/main.dfa24e57.js",
+    "main.js": "/morimenz_party/static/js/main.c662942d.js",
     "index.html": "/morimenz_party/index.html",
-    "main.dfa24e57.js.map": "/morimenz_party/static/js/main.dfa24e57.js.map"
+    "main.c662942d.js.map": "/morimenz_party/static/js/main.c662942d.js.map"
   },
   "entrypoints": [
-    "static/js/main.dfa24e57.js"
+    "static/js/main.c662942d.js"
   ]
 }
