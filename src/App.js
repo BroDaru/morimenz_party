@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
-import { User, X, Home, Edit3, Settings, Search, RotateCcw, Download, Camera, Cloud, Copy } from 'lucide-react';
+// [수정] Trash2 아이콘 추가
+import { User, X, Home, Edit3, Settings, Search, RotateCcw, Download, Camera, Cloud, Copy, Trash2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
-// [추가] Firebase 연동
-import { collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "firebase/firestore";
+// [수정] deleteDoc, doc 추가 (삭제 기능용)
+import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, deleteDoc, doc } from "firebase/firestore";
 import { db } from './firebase'; 
 
 import characterData from './data/character.json';
 import equipmentData from './data/myeongryun.json';
 
-// --- [2] 초기 파티 데이터 설정 ---
+// ... (INITIAL_DATA, CONSTANTS 등 기존 데이터 유지) ...
 const INITIAL_DATA = Array.from({ length: 10 }, (_, i) => ({
   id: i + 1,
   name: `파티 ${i + 1}`,
@@ -27,7 +28,7 @@ const ELEMENT_ICONS = {
 };
 const ROLE_ORDER = ["데미지형", "방어형", "보조형"];
 
-// --- [신규] 덮어쓸 파티 선택 모달 ---
+// --- [TargetSelectionModal] (기존 유지) ---
 const TargetSelectionModal = ({ isOpen, onClose, parties, onSelect }) => {
   if (!isOpen) return null;
 
@@ -63,7 +64,7 @@ const TargetSelectionModal = ({ isOpen, onClose, parties, onSelect }) => {
   );
 };
 
-// --- [수정] 추천 덱 공유 모달 ---
+// --- [ShareModal] (기존 유지) ---
 const ShareModal = ({ isOpen, onClose, party }) => {
   const [author, setAuthor] = useState("망붕이");
   const [description, setDescription] = useState("");
@@ -131,48 +132,67 @@ const ShareModal = ({ isOpen, onClose, party }) => {
   );
 };
 
-// --- [수정] 추천 덱 리스트 페이지 ---
+// --- [RecommendPage] (삭제 기능 추가) ---
 const RecommendPage = ({ onImportDeck, parties }) => {
   const [decks, setDecks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDeck, setSelectedDeck] = useState(null); // 가져오기 위해 선택된 덱
+  const [selectedDeck, setSelectedDeck] = useState(null);
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   
   const navigate = useNavigate();
 
+  // 데이터 불러오기 함수 분리 (삭제 후 재로딩 위해)
+  const fetchDecks = async () => {
+    try {
+      const q = query(collection(db, "recommended_decks"), orderBy("createdAt", "desc"));
+      const querySnapshot = await getDocs(q);
+      const loadedDecks = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setDecks(loadedDecks);
+    } catch (error) {
+      console.error("Error fetching decks:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchDecks = async () => {
-      try {
-        const q = query(collection(db, "recommended_decks"), orderBy("createdAt", "desc"));
-        const querySnapshot = await getDocs(q);
-        const loadedDecks = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setDecks(loadedDecks);
-      } catch (error) {
-        console.error("Error fetching decks:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchDecks();
   }, []);
 
-  // 1. 가져오기 버튼 클릭 -> 모달 열기
   const handleImportClick = (deck) => {
     setSelectedDeck(deck);
     setIsTargetModalOpen(true);
   };
 
-  // 2. 모달에서 파티 선택 완료
   const handleTargetSelect = (targetPartyId) => {
     if (!selectedDeck) return;
     
-    // 타겟 파티 이름 찾기 (confirm 메시지용)
     const targetPartyName = parties.find(p => p.id === targetPartyId)?.name || "선택한 파티";
 
     if(window.confirm(`'${selectedDeck.name}' 덱을 '${targetPartyName}'에 덮어씌우시겠습니까?`)) {
       onImportDeck(selectedDeck, targetPartyId); 
       setIsTargetModalOpen(false);
       navigate('/');
+    }
+  };
+
+  // [추가] 덱 삭제 기능 (관리자용)
+  const handleDelete = async (deckId) => {
+    // 1. 비밀번호 확인 (간단한 보안)
+    const password = window.prompt("관리자 비밀번호를 입력하세요:");
+    
+    // 비밀번호가 '1234'일 때만 삭제 (원하는 번호로 바꾸세요)
+    if (password === "1234") { 
+      try {
+        await deleteDoc(doc(db, "recommended_decks", deckId));
+        alert("삭제되었습니다.");
+        fetchDecks(); // 목록 새로고침
+      } catch (e) {
+        console.error("Error deleting document: ", e);
+        alert("삭제 중 오류가 발생했습니다.");
+      }
+    } else if (password !== null) {
+      alert("비밀번호가 틀렸습니다.");
     }
   };
 
@@ -191,16 +211,22 @@ const RecommendPage = ({ onImportDeck, parties }) => {
         ) : (
           <div className="grid gap-6 md:grid-cols-2">
             {decks.map(deck => (
-              <div key={deck.id} className="bg-slate-900 border border-slate-700 rounded-xl p-5 hover:border-yellow-500/50 transition-all shadow-lg flex flex-col">
+              <div key={deck.id} className="bg-slate-900 border border-slate-700 rounded-xl p-5 hover:border-yellow-500/50 transition-all shadow-lg flex flex-col relative group">
                 <div className="flex justify-between items-start mb-3">
                   <div>
                     <h3 className="text-xl font-bold text-white">{deck.name}</h3>
                     <p className="text-sm text-slate-400">by {deck.author}</p>
                   </div>
-                  {/* [수정] 바로 적용이 아니라 선택 함수 호출 */}
-                  <button onClick={() => handleImportClick(deck)} className="bg-yellow-600 hover:bg-yellow-500 text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1">
-                    <Download size={16}/> 가져오기
-                  </button>
+                  
+                  <div className="flex gap-2">
+                    {/* [추가] 삭제 버튼 */}
+                    <button onClick={() => handleDelete(deck.id)} className="bg-red-900/50 hover:bg-red-600 text-red-200 hover:text-white px-2 py-1.5 rounded-lg transition-colors" title="관리자 삭제">
+                      <Trash2 size={16}/>
+                    </button>
+                    <button onClick={() => handleImportClick(deck)} className="bg-yellow-600 hover:bg-yellow-500 text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1">
+                      <Download size={16}/> 가져오기
+                    </button>
+                  </div>
                 </div>
                 
                 <p className="text-slate-300 text-sm mb-4 bg-slate-800 p-2 rounded italic">"{deck.description || '코멘트 없음'}"</p>
@@ -221,7 +247,6 @@ const RecommendPage = ({ onImportDeck, parties }) => {
         )}
       </div>
 
-      {/* [추가] 덮어쓰기 대상 선택 모달 */}
       <TargetSelectionModal 
         isOpen={isTargetModalOpen} 
         onClose={() => setIsTargetModalOpen(false)} 
@@ -234,6 +259,7 @@ const RecommendPage = ({ onImportDeck, parties }) => {
 
 // --- [기존] SelectionModal (유지) ---
 const SelectionModal = ({ isOpen, onClose, title, data, onSelect, usedIds, type, activeElements = [], selectedId }) => {
+    // ... (기존 SelectionModal 코드와 동일)
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedElement, setSelectedElement] = useState(null);
     const [selectedRole, setSelectedRole] = useState(null);
